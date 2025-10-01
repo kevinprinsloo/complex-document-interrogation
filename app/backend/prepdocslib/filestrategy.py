@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from azure.core.credentials import AzureKeyCredential
 
@@ -8,6 +8,7 @@ from .embeddings import ImageEmbeddings, OpenAIEmbeddings
 from .fileprocessor import FileProcessor
 from .listfilestrategy import File, ListFileStrategy
 from .mediadescriber import ContentUnderstandingDescriber
+from .metadata_extractor import MetadataExtractor
 from .searchmanager import SearchManager, Section
 from .strategy import DocumentAction, SearchInfo, Strategy
 
@@ -21,6 +22,9 @@ async def parse_file(
     blob_manager: Optional[BaseBlobManager] = None,
     image_embeddings_client: Optional[ImageEmbeddings] = None,
     user_oid: Optional[str] = None,
+    metadata_extractor: Optional[MetadataExtractor] = None,
+    extract_ai_metadata: bool = False,
+    additional_metadata: Optional[Dict[str, Any]] = None,
 ) -> list[Section]:
     key = file.file_extension().lower()
     processor = file_processors.get(key)
@@ -40,7 +44,40 @@ async def parse_file(
             if image_embeddings_client:
                 image.embedding = await image_embeddings_client.create_embedding_for_image(image.bytes)
     logger.info("Splitting '%s' into sections", file.filename())
-    sections = [Section(chunk, content=file, category=category) for chunk in processor.splitter.split_pages(pages)]
+    
+    # Extract AI metadata if requested
+    ai_metadata = {}
+    if extract_ai_metadata and metadata_extractor:
+        try:
+            logger.info("Extracting AI metadata for '%s'", file.filename())
+            # Get content preview from first page for content-based extraction
+            content_preview = ""
+            if pages:
+                content_preview = pages[0].text[:2000]  # First 2000 chars
+            
+            if content_preview.strip():
+                ai_metadata = await metadata_extractor.extract_metadata_from_content(
+                    file.filename(), content_preview
+                )
+            else:
+                ai_metadata = await metadata_extractor.extract_metadata_from_filename(
+                    file.filename()
+                )
+            logger.info("Extracted AI metadata for '%s': %s", file.filename(), ai_metadata)
+        except Exception as e:
+            logger.warning("Failed to extract AI metadata for '%s': %s", file.filename(), e)
+            ai_metadata = {}
+    
+    # Combine metadata sources (priority: additional_metadata > ai_metadata > category)
+    final_metadata = {}
+    if ai_metadata:
+        final_metadata.update(ai_metadata)
+    if additional_metadata:
+        final_metadata.update(additional_metadata)
+    if category:
+        final_metadata["category"] = category
+    
+    sections = [Section(chunk, content=file, category=final_metadata.get("category"), metadata=final_metadata) for chunk in processor.splitter.split_pages(pages)]
     # For now, add the images back to each split chunk based off chunk.page_num
     for section in sections:
         section.chunk.images = [
@@ -69,6 +106,9 @@ class FileStrategy(Strategy):
         category: Optional[str] = None,
         use_content_understanding: bool = False,
         content_understanding_endpoint: Optional[str] = None,
+        metadata_extractor: Optional[MetadataExtractor] = None,
+        extract_ai_metadata: bool = False,
+        additional_metadata: Optional[Dict[str, Any]] = None,
     ):
         self.list_file_strategy = list_file_strategy
         self.blob_manager = blob_manager
@@ -83,6 +123,9 @@ class FileStrategy(Strategy):
         self.category = category
         self.use_content_understanding = use_content_understanding
         self.content_understanding_endpoint = content_understanding_endpoint
+        self.metadata_extractor = metadata_extractor
+        self.extract_ai_metadata = extract_ai_metadata
+        self.additional_metadata = additional_metadata or {}
 
     def setup_search_manager(self):
         self.search_manager = SearchManager(
@@ -117,7 +160,14 @@ class FileStrategy(Strategy):
                 try:
                     await self.blob_manager.upload_blob(file)
                     sections = await parse_file(
-                        file, self.file_processors, self.category, self.blob_manager, self.image_embeddings
+                        file, 
+                        self.file_processors, 
+                        self.category, 
+                        self.blob_manager, 
+                        self.image_embeddings,
+                        metadata_extractor=self.metadata_extractor,
+                        extract_ai_metadata=self.extract_ai_metadata,
+                        additional_metadata=self.additional_metadata
                     )
                     if sections:
                         await self.search_manager.update_content(sections, url=file.url)

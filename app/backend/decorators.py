@@ -5,7 +5,7 @@ from typing import Any, Callable, TypeVar, cast
 from quart import abort, current_app, request
 
 from config import CONFIG_AUTH_CLIENT, CONFIG_SEARCH_CLIENT
-from core.authentication import AuthError
+from core.authentication import AuthError, AuthenticationHelper
 from error import error_response
 
 
@@ -56,3 +56,16 @@ def authenticated(route_fn: _C) -> _C:
         return await route_fn(auth_claims, *args, **kwargs)
 
     return cast(_C, auth_handler)
+
+
+async def get_auth_claims_if_enabled(headers: dict) -> dict[str, Any]:
+    """
+    Helper function to get auth claims if authentication is enabled.
+    Returns empty dict if authentication is disabled or fails.
+    """
+    auth_helper: AuthenticationHelper = current_app.config[CONFIG_AUTH_CLIENT]
+    try:
+        return await auth_helper.get_auth_claims_if_enabled(headers)
+    except Exception as e:
+        logging.exception("Exception getting authorization information - %s", str(e))
+        return {}

@@ -5,6 +5,7 @@ import logging
 import mimetypes
 import os
 import time
+import yaml
 from collections.abc import AsyncGenerator, Awaitable
 from pathlib import Path
 from typing import Any, Callable, Union, cast
@@ -34,6 +35,7 @@ from opentelemetry.instrumentation.openai import OpenAIInstrumentor
 from quart import (
     Blueprint,
     Quart,
+    Response,
     abort,
     current_app,
     jsonify,
@@ -219,6 +221,17 @@ async def chat(auth_claims: dict[str, Any]):
     request_json = await request.get_json()
     context = request_json.get("context", {})
     context["auth_claims"] = auth_claims
+    
+    # Handle custom prompt selection
+    overrides = context.get("overrides", {})
+    selected_prompt = overrides.get("selected_prompt")
+    if selected_prompt:
+        custom_prompt_content = await get_custom_prompt_content(selected_prompt)
+        if custom_prompt_content:
+            # Override the prompt_template with the custom prompt content
+            overrides["prompt_template"] = custom_prompt_content
+            context["overrides"] = overrides
+    
     try:
         approach: Approach = cast(Approach, current_app.config[CONFIG_CHAT_APPROACH])
 
@@ -248,6 +261,17 @@ async def chat_stream(auth_claims: dict[str, Any]):
     request_json = await request.get_json()
     context = request_json.get("context", {})
     context["auth_claims"] = auth_claims
+    
+    # Handle custom prompt selection
+    overrides = context.get("overrides", {})
+    selected_prompt = overrides.get("selected_prompt")
+    if selected_prompt:
+        custom_prompt_content = await get_custom_prompt_content(selected_prompt)
+        if custom_prompt_content:
+            # Override the prompt_template with the custom prompt content
+            overrides["prompt_template"] = custom_prompt_content
+            context["overrides"] = overrides
+    
     try:
         approach: Approach = cast(Approach, current_app.config[CONFIG_CHAT_APPROACH])
 
@@ -259,17 +283,17 @@ async def chat_stream(auth_claims: dict[str, Any]):
                 current_app.config[CONFIG_CHAT_HISTORY_COSMOS_ENABLED],
                 current_app.config[CONFIG_CHAT_HISTORY_BROWSER_ENABLED],
             )
-        result = await approach.run_stream(
+
+        response_generator = approach.run_stream(
             request_json["messages"],
             context=context,
             session_state=session_state,
         )
-        response = await make_response(format_as_ndjson(result))
+        response = Response(format_as_ndjson(response_generator), mimetype="application/json-lines")
         response.timeout = None  # type: ignore
-        response.mimetype = "application/json-lines"
         return response
     except Exception as error:
-        return error_response(error, "/chat")
+        return error_response(error, "/chat/stream")
 
 
 # Send MSAL.js settings to the client UI
@@ -395,6 +419,252 @@ async def list_uploaded(auth_claims: dict[str, Any]):
     return jsonify(files), 200
 
 
+@bp.route("/metadata/all-documents-metadata", methods=["GET"])
+async def get_all_documents_metadata():
+    """Get metadata for all documents in the search index for filtering purposes."""
+    try:
+        search_client: SearchClient = current_app.config[CONFIG_SEARCH_CLIENT]
+        auth_helper: AuthenticationHelper = current_app.config[CONFIG_AUTH_CLIENT]
+        
+        # Try to get auth claims if authentication is enabled, but don't fail if not available
+        auth_claims = None
+        search_filter = None
+        
+        if auth_helper.use_authentication:
+            try:
+                # Try to get auth claims from request headers
+                from decorators import get_auth_claims_if_enabled
+                auth_claims = await get_auth_claims_if_enabled(request.headers)
+                if auth_claims:
+                    search_filter = await auth_helper.build_security_filters(auth_claims, "")
+            except Exception as e:
+                current_app.logger.info("No authentication provided for metadata endpoint, returning public documents only: %s", e)
+                # If authentication fails, we'll just return public documents (no filter)
+                pass
+        
+        # Search for all documents, selecting only metadata fields
+        search_results = await search_client.search(
+            search_text="*",
+            filter=search_filter,
+            select=["id", "sourcefile", "title", "description", "category", "document_type", "year", "vendor"],
+            top=1000,  # Limit to prevent excessive results
+            include_total_count=True
+        )
+        
+        # Process results and deduplicate by sourcefile
+        documents_map = {}
+        async for result in search_results:
+            sourcefile = result.get("sourcefile")
+            if sourcefile and sourcefile not in documents_map:
+                # Use sourcefile as the unique identifier for filtering
+                documents_map[sourcefile] = {
+                    "id": sourcefile,  # Use sourcefile as ID for filtering
+                    "title": result.get("title") or sourcefile,
+                    "source_url": result.get("sourcefile"),
+                    "category": result.get("category"),
+                    "documenttype": result.get("document_type"),
+                    "year": result.get("year"),
+                    "vendor": result.get("vendor")
+                }
+        
+        return jsonify(list(documents_map.values())), 200
+        
+    except Exception as e:
+        current_app.logger.error("Error retrieving documents metadata: %s", e)
+        return jsonify({"error": "Failed to retrieve documents metadata"}), 500
+
+
+@bp.route("/metadata/filtered-options", methods=["POST"])
+async def get_filtered_metadata_options():
+    """Get filtered metadata options based on current filter selections."""
+    try:
+        search_client: SearchClient = current_app.config[CONFIG_SEARCH_CLIENT]
+        auth_helper: AuthenticationHelper = current_app.config[CONFIG_AUTH_CLIENT]
+        
+        # Get current filter selections from request
+        request_json = await request.get_json()
+        current_filters = request_json.get("filters", {})
+        
+        # Store currently selected values to ensure they're always included
+        selected_categories = set(current_filters.get("category", []))
+        selected_doctypes = set(current_filters.get("documenttype", []))
+        selected_years = set(current_filters.get("year", []))
+        selected_vendors = set(current_filters.get("vendor", []))
+        
+        # Build filter conditions based on current selections
+        # We'll create separate queries for each field to get valid combinations
+        filter_conditions = []
+        
+        if current_filters.get("category"):
+            category_filters = [f"category eq '{cat.replace(chr(39), chr(39)+chr(39))}'" for cat in current_filters["category"]]
+            filter_conditions.append(f"({' or '.join(category_filters)})")
+            
+        if current_filters.get("documenttype"):
+            doctype_filters = [f"document_type eq '{dt.replace(chr(39), chr(39)+chr(39))}'" for dt in current_filters["documenttype"]]
+            filter_conditions.append(f"({' or '.join(doctype_filters)})")
+            
+        if current_filters.get("year"):
+            year_filters = [f"year eq '{year.replace(chr(39), chr(39)+chr(39))}'" for year in current_filters["year"]]
+            filter_conditions.append(f"({' or '.join(year_filters)})")
+            
+        if current_filters.get("vendor"):
+            vendor_filters = [f"vendor eq '{vendor.replace(chr(39), chr(39)+chr(39))}'" for vendor in current_filters["vendor"]]
+            filter_conditions.append(f"({' or '.join(vendor_filters)})")
+        
+        # Combine all filter conditions
+        search_filter = " and ".join(filter_conditions) if filter_conditions else None
+        
+        # Add security filter if authentication is enabled
+        auth_claims = None
+        if auth_helper.use_authentication:
+            try:
+                from decorators import get_auth_claims_if_enabled
+                auth_claims = await get_auth_claims_if_enabled(request.headers)
+                if auth_claims:
+                    security_filter = await auth_helper.build_security_filters(auth_claims, "")
+                    if security_filter:
+                        search_filter = f"{search_filter} and {security_filter}" if search_filter else security_filter
+            except Exception:
+                pass
+        
+        # Search for documents matching current filters
+        search_results = await search_client.search(
+            search_text="*",
+            filter=search_filter,
+            select=["sourcefile", "category", "document_type", "year", "vendor"],
+            top=1000
+        )
+        
+        # Collect unique values for each metadata field
+        categories = set()
+        document_types = set()
+        years = set()
+        vendors = set()
+        files = set()
+        
+        async for result in search_results:
+            if result.get("category"):
+                categories.add(result["category"])
+            if result.get("document_type"):
+                document_types.add(result["document_type"])
+            if result.get("year"):
+                years.add(result["year"])
+            if result.get("vendor"):
+                vendors.add(result["vendor"])
+            if result.get("sourcefile"):
+                files.add(result["sourcefile"])
+        
+        # Always include currently selected values to preserve user selections
+        categories.update(selected_categories)
+        document_types.update(selected_doctypes)
+        years.update(selected_years)
+        vendors.update(selected_vendors)
+        
+        # Convert to sorted lists and create option objects
+        filtered_options = {
+            "categories": [{"value": cat, "label": cat} for cat in sorted(categories)],
+            "document_types": [{"value": dt, "label": dt} for dt in sorted(document_types)],
+            "years": [{"value": year, "label": year} for year in sorted(years)],
+            "vendors": [{"value": vendor, "label": vendor} for vendor in sorted(vendors)],
+            "files": [{"value": file, "label": file} for file in sorted(files)]
+        }
+        
+        return jsonify(filtered_options), 200
+        
+    except Exception as e:
+        current_app.logger.error("Error retrieving filtered metadata options: %s", e)
+        return jsonify({"error": "Failed to retrieve filtered metadata options"}), 500
+
+
+@bp.route("/prompts/custom", methods=["GET"])
+async def get_custom_prompts():
+    """Get all available custom prompt files."""
+    try:
+        prompts_dir = Path(__file__).resolve().parent / "custom_prompts"
+        
+        if not prompts_dir.exists():
+            return jsonify({"prompts": [], "error": "Custom prompts directory not found"}), 200
+        
+        prompts = []
+        for yaml_file in prompts_dir.glob("*.yaml"):
+            try:
+                with open(yaml_file, 'r', encoding='utf-8') as f:
+                    prompt_data = yaml.safe_load(f)
+                
+                # Validate required fields
+                if not all(key in prompt_data for key in ['name', 'description', 'prompt']):
+                    current_app.logger.warning(f"Invalid prompt file {yaml_file.name}: missing required fields")
+                    continue
+                
+                prompts.append({
+                    "id": yaml_file.stem,
+                    "name": prompt_data.get("name", yaml_file.stem),
+                    "description": prompt_data.get("description", ""),
+                    "category": prompt_data.get("category", "general"),
+                    "author": prompt_data.get("author", "Unknown"),
+                    "version": prompt_data.get("version", "1.0")
+                })
+            except Exception as e:
+                current_app.logger.warning(f"Error reading prompt file {yaml_file.name}: {e}")
+                continue
+        
+        return jsonify({"prompts": prompts}), 200
+        
+    except Exception as error:
+        current_app.logger.error("Error fetching custom prompts: %s", error)
+        return jsonify({"error": "Failed to fetch custom prompts"}), 500
+
+
+@bp.route("/prompts/custom/<prompt_id>", methods=["GET"])
+async def get_custom_prompt(prompt_id: str):
+    """Get a specific custom prompt by ID."""
+    try:
+        prompts_dir = Path(__file__).resolve().parent / "custom_prompts"
+        prompt_file = prompts_dir / f"{prompt_id}.yaml"
+        
+        if not prompt_file.exists():
+            return jsonify({"error": "Prompt not found"}), 404
+        
+        with open(prompt_file, 'r', encoding='utf-8') as f:
+            prompt_data = yaml.safe_load(f)
+        
+        # Validate required fields
+        if not all(key in prompt_data for key in ['name', 'description', 'prompt']):
+            return jsonify({"error": "Invalid prompt file format"}), 400
+        
+        return jsonify({
+            "id": prompt_id,
+            "name": prompt_data.get("name"),
+            "description": prompt_data.get("description"),
+            "prompt": prompt_data.get("prompt"),
+            "category": prompt_data.get("category", "general"),
+            "author": prompt_data.get("author", "Unknown"),
+            "version": prompt_data.get("version", "1.0")
+        }), 200
+        
+    except Exception as error:
+        current_app.logger.error("Error fetching custom prompt %s: %s", prompt_id, error)
+        return jsonify({"error": "Failed to fetch custom prompt"}), 500
+
+
+async def get_custom_prompt_content(prompt_id: str) -> str | None:
+    """Helper function to get custom prompt content by ID."""
+    try:
+        prompts_dir = Path(__file__).resolve().parent / "custom_prompts"
+        prompt_file = prompts_dir / f"{prompt_id}.yaml"
+        
+        if not prompt_file.exists():
+            return None
+        
+        with open(prompt_file, 'r', encoding='utf-8') as f:
+            prompt_data = yaml.safe_load(f)
+        
+        return prompt_data.get("prompt")
+    except Exception as e:
+        current_app.logger.error("Error loading custom prompt %s: %s", prompt_id, e)
+        return None
+
+
 @bp.before_app_serving
 async def setup_clients():
     # Replace these with your own values, either in environment variables or directly here
@@ -404,7 +674,7 @@ async def setup_clients():
     AZURE_USERSTORAGE_ACCOUNT = os.environ.get("AZURE_USERSTORAGE_ACCOUNT")
     AZURE_USERSTORAGE_CONTAINER = os.environ.get("AZURE_USERSTORAGE_CONTAINER")
     AZURE_SEARCH_SERVICE = os.environ["AZURE_SEARCH_SERVICE"]
-    AZURE_SEARCH_ENDPOINT = f"https://{AZURE_SEARCH_SERVICE}.search.windows.net"
+    AZURE_SEARCH_ENDPOINT = os.environ.get("AZURE_SEARCH_ENDPOINT", f"https://{AZURE_SEARCH_SERVICE}.search.windows.net")
     AZURE_SEARCH_INDEX = os.environ["AZURE_SEARCH_INDEX"]
     AZURE_SEARCH_AGENT = os.getenv("AZURE_SEARCH_AGENT", "")
     # Shared by all OpenAI deployments
@@ -508,13 +778,22 @@ async def setup_clients():
     current_app.config[CONFIG_CREDENTIAL] = azure_credential
 
     # Set up clients for AI Search and Storage
+    # Use search key if available, otherwise use azure_credential
+    search_credential = azure_credential
+    if AZURE_SEARCH_KEY := os.getenv("AZURE_SEARCH_KEY"):
+        from azure.core.credentials import AzureKeyCredential
+        search_credential = AzureKeyCredential(AZURE_SEARCH_KEY)
+        current_app.logger.info("Using search key for authentication")
+    else:
+        current_app.logger.info("Using Azure credential for search authentication")
+    
     search_client = SearchClient(
         endpoint=AZURE_SEARCH_ENDPOINT,
         index_name=AZURE_SEARCH_INDEX,
-        credential=azure_credential,
+        credential=search_credential,
     )
     agent_client = KnowledgeAgentRetrievalClient(
-        endpoint=AZURE_SEARCH_ENDPOINT, agent_name=AZURE_SEARCH_AGENT, credential=azure_credential
+        endpoint=AZURE_SEARCH_ENDPOINT, agent_name=AZURE_SEARCH_AGENT, credential=search_credential
     )
 
     # Set up the global blob storage manager (used for global content/images, but not user uploads)
@@ -767,5 +1046,9 @@ def create_app():
         if len(allowed_origins) > 0:
             app.logger.info("CORS enabled for %s", allowed_origins)
             cors(app, allow_origin=allowed_origins, allow_methods=["GET", "POST"])
+    else:
+        # Enable CORS for local development
+        app.logger.info("CORS enabled for local development")
+        cors(app, allow_origin=["http://localhost:50505", "http://127.0.0.1:50505"], allow_methods=["GET", "POST"])
 
     return app

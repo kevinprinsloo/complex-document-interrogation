@@ -186,17 +186,98 @@ class Approach(ABC):
         self.user_blob_manager = user_blob_manager
 
     def build_filter(self, overrides: dict[str, Any], auth_claims: dict[str, Any]) -> Optional[str]:
-        include_category = overrides.get("include_category")
+        include_categories = overrides.get("include_categories", [])
+        include_document_types = overrides.get("include_document_types", [])
+        include_years = overrides.get("include_years", [])
+        # Handle both plural (new) and singular (legacy) vendor parameter names
+        include_vendors = overrides.get("include_vendors", [])
+        if not include_vendors:
+            # Fallback to legacy singular form from Ask.tsx
+            legacy_vendor = overrides.get("include_vendor")
+            if legacy_vendor:
+                include_vendors = [legacy_vendor] if isinstance(legacy_vendor, str) else legacy_vendor
+        selected_files = overrides.get("selected_files", [])
+        
         exclude_category = overrides.get("exclude_category")
+        
+        # Debug logging can be enabled for troubleshooting
+        # print(f"DEBUG build_filter - Selected files: {selected_files}")
+        # print(f"DEBUG build_filter - Include vendors: {include_vendors}")
+        
+        # Legacy exclude category (still used in Settings UI)
+        exclude_category = overrides.get("exclude_category")
+        
         security_filter = self.auth_helper.build_security_filters(overrides, auth_claims)
         filters = []
-        if include_category:
-            filters.append("category eq '{}'".format(include_category.replace("'", "''")))
+        
+        # Handle multi-value category filters
+        if include_categories:
+            category_filters = []
+            for category in include_categories:
+                escaped_category = category.replace("'", "''")
+                category_filters.append(f"category eq '{escaped_category}'")
+            if category_filters:
+                filters.append(f"({' or '.join(category_filters)})")
+        
+        # Handle multi-value document type filters
+        if include_document_types:
+            doctype_filters = []
+            for doc_type in include_document_types:
+                escaped_type = doc_type.replace("'", "''")
+                doctype_filters.append(f"document_type eq '{escaped_type}'")
+            if doctype_filters:
+                filters.append(f"({' or '.join(doctype_filters)})")
+        
+        # Handle multi-value year filters
+        if include_years:
+            year_filters = []
+            for year in include_years:
+                escaped_year = year.replace("'", "''")
+                year_filters.append(f"year eq '{escaped_year}'")
+            if year_filters:
+                filters.append(f"({' or '.join(year_filters)})")
+        
+        # Handle selected files filter (highest priority - restricts to specific documents)
+        if selected_files:
+            # print(f"DEBUG - Processing {len(selected_files)} selected files")
+            file_filters = []
+            for file_id in selected_files:
+                escaped_id = file_id.replace("'", "''")
+                file_filter = f"sourcefile eq '{escaped_id}'"
+                file_filters.append(file_filter)
+                # print(f"DEBUG - Added file filter: {file_filter}")
+            if file_filters:
+                combined_filter = f"({' or '.join(file_filters)})"
+                filters.append(combined_filter)
+                # print(f"DEBUG - Combined file filter: {combined_filter}")
+                # print(f"DEBUG - Skipping vendor filters because selected_files is specified")
+        # Handle multi-value vendor filters (only if no selected files)
+        elif include_vendors:
+            # print(f"DEBUG - Processing {len(include_vendors)} vendor filters")
+            vendor_filters = []
+            for vendor in include_vendors:
+                # print(f"DEBUG - Raw vendor value: '{vendor}' (length: {len(vendor)})")
+                escaped_vendor = vendor.replace("'", "''")
+                # Use exact equality since vendor field is not searchable
+                vendor_filter = f"vendor eq '{escaped_vendor}'"
+                vendor_filters.append(vendor_filter)
+                # print(f"DEBUG - Added vendor filter (exact): {vendor_filter}")
+            if vendor_filters:
+                combined_filter = f"({' or '.join(vendor_filters)})"
+                filters.append(combined_filter)
+                # print(f"DEBUG - Combined vendor filter: {combined_filter}")
+        
+        # Handle exclude category (still available in Settings UI)
         if exclude_category:
             filters.append("category ne '{}'".format(exclude_category.replace("'", "''")))
+        
+        # Add security filter
         if security_filter:
             filters.append(security_filter)
-        return None if len(filters) == 0 else " and ".join(filters)
+        
+        final_filter = None if len(filters) == 0 else " and ".join(filters)
+        print(f"DEBUG - Final Azure Search filter: {final_filter}")
+        return final_filter
 
     async def search(
         self,
@@ -214,6 +295,12 @@ class Approach(ABC):
     ) -> list[Document]:
         search_text = query_text if use_text_search else ""
         search_vectors = vectors if use_vector_search else []
+        
+        # Debug logging for search parameters
+        print(f"DEBUG search - Query: {query_text}")
+        print(f"DEBUG search - Filter: {filter}")
+        print(f"DEBUG search - Top: {top}")
+        print(f"DEBUG search - Starting Azure Search request...")
         if use_semantic_ranker:
             results = await self.search_client.search(
                 search_text=search_text,
@@ -237,32 +324,45 @@ class Approach(ABC):
             )
 
         documents: list[Document] = []
-        async for page in results.by_page():
-            async for document in page:
-                documents.append(
-                    Document(
-                        id=document.get("id"),
-                        content=document.get("content"),
-                        category=document.get("category"),
-                        sourcepage=document.get("sourcepage"),
-                        sourcefile=document.get("sourcefile"),
-                        oids=document.get("oids"),
-                        groups=document.get("groups"),
-                        captions=cast(list[QueryCaptionResult], document.get("@search.captions")),
-                        score=document.get("@search.score"),
-                        reranker_score=document.get("@search.reranker_score"),
-                        images=document.get("images"),
+        print(f"DEBUG search - Processing search results...")
+        try:
+            async for page in results.by_page():
+                async for document in page:
+                    print(f"DEBUG search - Found document: {document.get('sourcefile')}")
+                    documents.append(
+                        Document(
+                            id=document.get("id"),
+                            content=document.get("content"),
+                            category=document.get("category"),
+                            sourcepage=document.get("sourcepage"),
+                            sourcefile=document.get("sourcefile"),
+                            oids=document.get("oids"),
+                            groups=document.get("groups"),
+                            captions=cast(list[QueryCaptionResult], document.get("@search.captions")),
+                            score=document.get("@search.score"),
+                            reranker_score=document.get("@search.reranker_score"),
+                            images=document.get("images"),
+                        )
                     )
-                )
+        except Exception as e:
+            print(f"DEBUG search - Error processing results: {e}")
 
-            qualified_documents = [
-                doc
-                for doc in documents
-                if (
-                    (doc.score or 0) >= (minimum_search_score or 0)
-                    and (doc.reranker_score or 0) >= (minimum_reranker_score or 0)
-                )
-            ]
+        qualified_documents = [
+            doc
+            for doc in documents
+            if (
+                (doc.score or 0) >= (minimum_search_score or 0)
+                and (doc.reranker_score or 0) >= (minimum_reranker_score or 0)
+            )
+        ]
+
+        # Debug logging for search results
+        print(f"DEBUG search - Total documents found: {len(documents)}")
+        print(f"DEBUG search - Qualified documents after scoring: {len(qualified_documents)}")
+        if qualified_documents:
+            print(f"DEBUG search - First document sourcefile: {qualified_documents[0].sourcefile}")
+        else:
+            print("DEBUG search - No qualified documents returned!")
 
         return qualified_documents
 
@@ -277,23 +377,38 @@ class Approach(ABC):
         results_merge_strategy: Optional[str] = None,
     ) -> tuple[KnowledgeAgentRetrievalResponse, list[Document]]:
         # STEP 1: Invoke agentic retrieval
-        response = await agent_client.retrieve(
-            retrieval_request=KnowledgeAgentRetrievalRequest(
-                messages=[
-                    KnowledgeAgentMessage(
-                        role=str(msg["role"]), content=[KnowledgeAgentMessageTextContent(text=str(msg["content"]))]
-                    )
-                    for msg in messages
-                    if msg["role"] != "system"
-                ],
-                knowledge_source_params=[
-                    SearchIndexKnowledgeSourceParams(
-                        knowledge_source_name=search_index_name,
-                        filter_add_on=filter_add_on,
-                    )
-                ],
+        print(f"DEBUG run_agentic_retrieval - search_index_name: {search_index_name}")
+        print(f"DEBUG run_agentic_retrieval - filter_add_on: {filter_add_on}")
+        print(f"DEBUG run_agentic_retrieval - top: {top}")
+        try:
+            response = await agent_client.retrieve(
+                retrieval_request=KnowledgeAgentRetrievalRequest(
+                    messages=[
+                        KnowledgeAgentMessage(
+                            role=str(msg["role"]), content=[KnowledgeAgentMessageTextContent(text=str(msg["content"]))]
+                        )
+                        for msg in messages
+                        if msg["role"] != "system"
+                    ],
+                    knowledge_source_params=[
+                        SearchIndexKnowledgeSourceParams(
+                            knowledge_source_name=search_index_name,
+                            filter_add_on=filter_add_on,
+                        )
+                    ],
+                )
             )
-        )
+        except Exception as e:
+            if "No agent with the name" in str(e):
+                raise Exception(f"Agent not found. Please run prepdocs.py to create the required agent. Error: {str(e)}")
+            elif "content management policy" in str(e) or "response was filtered" in str(e):
+                # Content filtering error - fall back to regular search
+                import logging
+                logging.warning(f"Agentic retrieval blocked by content filter, falling back to regular search: {str(e)}")
+                # Return empty response to trigger fallback to regular search
+                from azure.search.documents.agent.models import KnowledgeAgentRetrievalResponse
+                return KnowledgeAgentRetrievalResponse(response=[], activity=[], references=[]), []
+            raise
 
         # Map activity id -> agent's internal search query
         activities = response.activity
@@ -312,11 +427,14 @@ class Approach(ABC):
         )
 
         # No refs? we're done
+        print(f"DEBUG run_agentic_retrieval - Response has {len(response.references) if response and response.references else 0} references")
         if not (response and response.references):
+            print(f"DEBUG run_agentic_retrieval - No references found, returning empty results")
             return response, []
 
         # Extract references
         refs = [r for r in response.references if isinstance(r, KnowledgeAgentSearchIndexReference)]
+        # print(f"DEBUG run_agentic_retrieval - Found {len(refs)} search index references")
         documents: list[Document] = []
         doc_to_ref_id: dict[str, str] = {}
 
@@ -535,9 +653,9 @@ class Approach(ABC):
             params["reasoning_effort"] = reasoning_effort or overrides.get("reasoning_effort") or self.reasoning_effort
 
         else:
-            # Include parameters that may not be supported for reasoning models
+            # Use max_completion_tokens for all models in newer API versions
             params = {
-                "max_tokens": response_token_limit,
+                "max_completion_tokens": response_token_limit,
                 "temperature": temperature or overrides.get("temperature", 0.3),
             }
         if should_stream:

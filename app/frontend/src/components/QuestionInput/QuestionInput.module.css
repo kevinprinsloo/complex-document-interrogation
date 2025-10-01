@@ -6,6 +6,8 @@
     width: 100%;
     padding: 0.8rem;
     background: white;
+    min-height: 5.625rem;
+    transition: height 0.2s ease;
 }
 
 .questionInputTextArea {
@@ -15,12 +17,18 @@
 
 .questionInputButtonsContainer {
     display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 0.5rem;
+    margin-left: 0.5rem;
+}
+
+.settingsButton {
+    min-width: auto !important;
 }
 
 @media (min-width: 992px) {
     .questionInputContainer {
-        height: 5.625rem;
+        min-height: 5.625rem;
     }
 }

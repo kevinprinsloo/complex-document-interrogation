@@ -1,0 +1,438 @@
+.sideNavigation {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 280px;
+    height: 100vh;
+    background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+    border-right: 1px solid #e1e8ed;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+    backdrop-filter: blur(10px);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sideNavigation.collapsed {
+    width: 80px;
+}
+
+.navHeader {
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    border-bottom: 1px solid #e8eef4;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    position: relative;
+}
+
+.collapsed .navHeader {
+    padding: 0 16px;
+    justify-content: center;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.navHeader::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 20px;
+    right: 20px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, #e1e8ed 50%, transparent 100%);
+}
+
+.appBrand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.3s ease;
+}
+
+.collapsed .appBrand {
+    gap: 0;
+    justify-content: center;
+}
+
+.brandIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
+    box-shadow: 0 4px 12px rgba(16, 110, 190, 0.3);
+    transition: all 0.3s ease;
+}
+
+.brandIcon:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(16, 110, 190, 0.4);
+}
+
+.brandText {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+
+.collapsed .brandText {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.brandTitle {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1a202c;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.brandSubtitle {
+    font-size: 12px;
+    font-weight: 500;
+    color: #64748b;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+}
+
+.navLinks {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 0;
+    gap: 4px;
+    overflow-y: auto;
+}
+
+.collapsed .navLinks {
+    padding: 16px 0;
+    align-items: center;
+}
+
+.navLink {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    margin: 0 12px;
+    color: #475569;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 14px;
+    border-radius: 12px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    border: 1px solid transparent;
+}
+
+.collapsed .navLink {
+    justify-content: center;
+    padding: 12px 8px;
+    margin: 0 8px;
+    width: 48px;
+    min-width: 48px;
+}
+
+.collapsed .navLink span {
+    display: none;
+}
+
+.navLink:hover {
+    background: linear-gradient(135deg, #f1f8ff 0%, #e3f2fd 100%);
+    color: #0078d4;
+    border-color: #b3d9ff;
+    transform: translateX(2px);
+    box-shadow: 0 2px 8px rgba(0, 120, 212, 0.1);
+}
+
+.navLinkActive {
+    background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
+    color: #ffffff;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0, 120, 212, 0.3);
+    border-color: #0078d4;
+}
+
+.navLinkActive:hover {
+    background: linear-gradient(135deg, #106ebe 0%, #005a9e 100%);
+    transform: translateX(0);
+    box-shadow: 0 6px 16px rgba(0, 120, 212, 0.4);
+}
+
+.navButton {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    margin: 0 12px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: #475569;
+    font-weight: 500;
+    font-size: 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    font-family: inherit;
+}
+
+.collapsed .navButton {
+    justify-content: center;
+    padding: 12px 8px;
+    margin: 0 8px;
+    width: 48px;
+    min-width: 48px;
+}
+
+.collapsed .navButton span {
+    display: none;
+}
+
+.navButton:hover {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    color: #334155;
+    border-color: #cbd5e1;
+    transform: translateX(2px);
+    box-shadow: 0 2px 8px rgba(51, 65, 85, 0.08);
+}
+
+.navButton:active {
+    transform: translateX(1px);
+    box-shadow: 0 1px 4px rgba(51, 65, 85, 0.1);
+}
+
+.navIcon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    opacity: 0.8;
+    transition: all 0.2s ease;
+}
+
+.navLink:hover .navIcon,
+.navButton:hover .navIcon {
+    opacity: 1;
+    transform: scale(1.05);
+}
+
+.navLinkActive .navIcon {
+    opacity: 1;
+}
+
+.navDivider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, #e2e8f0 20%, #e2e8f0 80%, transparent 100%);
+    margin: 12px 20px;
+    transition: margin 0.3s ease;
+}
+
+.collapsed .navDivider {
+    margin: 12px 16px;
+}
+
+.navSpacer {
+    flex: 1;
+    min-height: 20px;
+}
+
+.badge {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+    animation: pulse 2s infinite;
+    transition: all 0.3s ease;
+}
+
+.badgeCollapsed {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 9px;
+    min-width: 14px;
+    height: 14px;
+    padding: 1px 4px;
+}
+
+.collapseButton {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.collapseButton:hover {
+    background: rgba(100, 116, 139, 0.1);
+    color: #475569;
+}
+
+.collapsed .collapseButton {
+    margin-top: 8px;
+}
+
+.collapseIcon {
+    transition: transform 0.2s ease;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(0.95);
+    }
+}
+
+/* Scrollbar styling */
+.navLinks::-webkit-scrollbar {
+    width: 4px;
+}
+
+.navLinks::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.navLinks::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 2px;
+}
+
+.navLinks::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+    .sideNavigation {
+        width: 240px;
+    }
+    
+    .navHeader {
+        height: 80px;
+        padding: 0 16px;
+    }
+    
+    .brandTitle {
+        font-size: 15px;
+    }
+    
+    .brandSubtitle {
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 768px) {
+    .sideNavigation {
+        width: 200px;
+    }
+    
+    .navHeader {
+        height: 70px;
+        padding: 0 12px;
+    }
+    
+    .appBrand {
+        gap: 8px;
+    }
+    
+    .brandIcon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+    }
+    
+    .brandTitle {
+        font-size: 14px;
+    }
+    
+    .brandSubtitle {
+        font-size: 10px;
+    }
+    
+    .navLink,
+    .navButton {
+        padding: 10px 12px;
+        margin: 0 8px;
+        font-size: 13px;
+        gap: 10px;
+    }
+    
+    .navIcon {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .navDivider {
+        margin: 8px 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .sideNavigation {
+        width: 60px;
+    }
+    
+    .sideNavigation.collapsed {
+        width: 60px;
+    }
+    
+    .navHeader {
+        padding: 0 8px;
+    }
+    
+    .brandText {
+        display: none;
+    }
+    
+    .collapseButton {
+        display: none;
+    }
+    
+    .navLink span,
+    .navButton span {
+        display: none;
+    }
+    
+    .navLink,
+    .navButton {
+        justify-content: center;
+        padding: 12px 8px;
+        margin: 0 4px;
+    }
+    
+    .badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        font-size: 9px;
+        min-width: 14px;
+        height: 14px;
+        padding: 1px 4px;
+    }
+}

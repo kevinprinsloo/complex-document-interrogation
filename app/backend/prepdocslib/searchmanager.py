@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import os
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from azure.search.documents.indexes.models import (
     AIServicesVisionParameters,
@@ -49,10 +49,11 @@ class Section:
     A section of a page that is stored in a search service. These sections are used as context by Azure OpenAI service
     """
 
-    def __init__(self, chunk: Chunk, content: File, category: Optional[str] = None):
+    def __init__(self, chunk: Chunk, content: File, category: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None):
         self.chunk = chunk  # content comes from here
         self.content = content  # sourcepage and sourcefile come from here
         self.category = category
+        self.metadata = metadata or {}
         # this also needs images which will become the images field
 
 
@@ -251,6 +252,12 @@ class SearchManager:
                         filterable=True,
                         facetable=False,
                     ),
+                    # AI-extracted metadata fields
+                    SimpleField(name="title", type="Edm.String", filterable=True, facetable=True),
+                    SimpleField(name="description", type="Edm.String", filterable=True, facetable=False),
+                    SimpleField(name="document_type", type="Edm.String", filterable=True, facetable=True),
+                    SimpleField(name="year", type="Edm.String", filterable=True, facetable=True),
+                    SimpleField(name="vendor", type="Edm.String", filterable=True, facetable=True),
                 ]
                 if self.use_acls:
                     fields.append(
@@ -438,9 +445,20 @@ class SearchManager:
 
     async def create_agent(self):
         if self.search_info.agent_name:
+            # Check if required Azure OpenAI configuration is available
+            if not self.search_info.azure_openai_endpoint:
+                logger.warning(f"Skipping agent creation for {self.search_info.agent_name}: AZURE_OPENAI_ENDPOINT not configured")
+                return
+            if not self.search_info.azure_openai_searchagent_deployment:
+                logger.warning(f"Skipping agent creation for {self.search_info.agent_name}: AZURE_OPENAI_SEARCHAGENT_DEPLOYMENT not configured")
+                return
+            if not self.search_info.azure_openai_searchagent_model:
+                logger.warning(f"Skipping agent creation for {self.search_info.agent_name}: AZURE_OPENAI_SEARCHAGENT_MODEL not configured")
+                return
+                
             logger.info(f"Creating search agent named {self.search_info.agent_name}")
 
-            field_names = ["id", "sourcepage", "sourcefile", "content", "category"]
+            field_names = ["id", "sourcepage", "sourcefile", "content", "category", "document_type", "year", "vendor", "title", "description"]
             if self.use_acls:
                 field_names.extend(["oids", "groups"])
             if self.search_images:
@@ -511,6 +529,12 @@ class SearchManager:
                             filename=section.content.filename(), page=section.chunk.page_num
                         ),
                         "sourcefile": section.content.filename(),
+                        # Add AI-extracted metadata fields
+                        "title": section.metadata.get("title"),
+                        "description": section.metadata.get("description"),
+                        "document_type": section.metadata.get("document_type"),
+                        "year": section.metadata.get("year"),
+                        "vendor": section.metadata.get("vendor"),
                         **image_fields,
                         **section.content.acls,
                     }

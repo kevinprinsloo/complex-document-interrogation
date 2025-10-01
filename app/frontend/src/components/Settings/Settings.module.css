@@ -1,5 +1,6 @@
 .settingsSeparator {
-    margin-top: 0.75rem;
+    margin-top: 1.5rem;
+    position: relative;
 }
 
 .option-slider {
@@ -55,12 +56,269 @@
 }
 
 .fieldset {
-    border: none;
-    padding: 0;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    margin: 1rem 0;
 }
 
 .legend {
-    font-size: 14px;
-    margin-bottom: 5px;
-    padding: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.85rem;
+}
+
+.sectionHeader {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 2rem 0 1.5rem 0;
+    color: #1f2937;
+    border-bottom: 3px solid #e5e7eb;
+    padding-bottom: 1rem;
+    position: relative;
+    letter-spacing: -0.025em;
+    text-transform: uppercase;
+    font-size: 1.1rem;
+    letter-spacing: 0.05em;
+}
+
+.sectionHeader::before {
+    content: '';
+    position: absolute;
+    bottom: -3px;
+    left: 0;
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    border-radius: 2px;
+}
+
+.sectionHeader:first-child {
+    margin-top: 0;
+}
+
+.subsectionHeader {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0 0 1rem 0;
+    color: #1f2937;
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.subsectionHeader::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-size: 1rem;
+}
+
+.filterDescription {
+    font-size: 0.95rem;
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+    padding: 1rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #e5e7eb 100%);
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+    font-style: italic;
+}
+
+.currentFiltersDisplay {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 1px solid #7dd3fc;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    position: relative;
+}
+
+.currentFiltersDisplay::before {
+    content: '';
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    font-size: 1.2rem;
+}
+
+.filterSummary {
+    display: inline-block;
+    margin: 0.5rem 0.5rem 0.5rem 0;
+    color: #0369a1;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    border: 1px solid rgba(3, 105, 161, 0.2);
+    transition: all 0.3s ease;
+}
+
+.filterSummary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.advancedFiltersButton {
+    margin-top: 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border: none !important;
+    border-radius: 12px !important;
+    padding: 1rem 2rem !important;
+    font-weight: 700 !important;
+    font-size: 1rem !important;
+    color: white !important;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
+    transition: all 0.3s ease !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.advancedFiltersButton:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6) !important;
+    background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
+}
+
+/* Section Cards */
+.settingsSection {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(229, 231, 235, 0.6);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.settingsSection::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+}
+
+.settingsSection:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1), 0 4px 10px rgba(0, 0, 0, 0.05);
+    transform: translateY(-2px);
+}
+
+/* Enhanced form controls */
+.settingsSection .ms-TextField,
+.settingsSection .ms-Dropdown,
+.settingsSection .ms-Checkbox {
+    margin-bottom: 1.5rem;
+}
+
+.settingsSection .ms-TextField .ms-TextField-fieldGroup {
+    border-radius: 8px;
+    border: 2px solid #e5e7eb;
+    transition: all 0.3s ease;
+}
+
+.settingsSection .ms-TextField .ms-TextField-fieldGroup:hover {
+    border-color: #9ca3af;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.settingsSection .ms-TextField .ms-TextField-fieldGroup.is-focused {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.settingsSection .ms-Dropdown .ms-Dropdown-container {
+    border-radius: 8px;
+}
+
+.settingsSection .ms-Dropdown .ms-Dropdown-title {
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.settingsSection .ms-Dropdown .ms-Dropdown-title:hover {
+    border-color: #9ca3af;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.settingsSection .ms-Checkbox .ms-Checkbox-checkbox {
+    border-radius: 4px;
+    border: 2px solid #e5e7eb;
+    transition: all 0.3s ease;
+}
+
+.settingsSection .ms-Checkbox .ms-Checkbox-checkbox:hover {
+    border-color: #667eea;
+    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.1);
+}
+
+/* Main container styling */
+.settingsContainer {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    min-height: 100vh;
+    padding: 2rem;
+    width: 100%;
+    max-width: none;
+}
+
+/* Wide panel styling */
+.widePanel {
+    width: 800px !important;
+    max-width: 90vw !important;
+}
+
+.widePanel :global(.ms-Panel-main) {
+    width: 800px !important;
+    max-width: 90vw !important;
+}
+
+.widePanel :global(.ms-Panel-content) {
+    width: 100% !important;
+    max-width: none !important;
+}
+
+.widePanel :global(.ms-Panel-scrollableContent) {
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+}
+
+.widePanel :global(.ms-Panel-contentInner) {
+    width: 100% !important;
+    max-width: none !important;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .settingsSection {
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .settingsContainer {
+        padding: 1rem;
+    }
+    
+    .sectionHeader {
+        font-size: 1rem;
+        margin: 1.5rem 0 1rem 0;
+    }
 }

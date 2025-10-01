@@ -8,6 +8,7 @@
     display: flex;
     flex: 1;
     min-height: 0; /* allow inner scroll areas to work inside flex container */
+    margin-left: 280px; /* Account for wider side navigation */
 }
 
 .header {
@@ -22,6 +23,7 @@
     padding-left: 1rem;
     padding-right: 1rem;
     position: relative;
+    margin-left: 80px; /* Account for wider side navigation */
 }
 
 .headerTitleContainer {
@@ -146,5 +148,43 @@
 
     .menuToggle {
         display: none;
+    }
+
+    .main {
+        margin-left: 280px;
+    }
+
+    .headerContainer {
+        margin-left: 280px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .main {
+        margin-left: 240px;
+    }
+
+    .headerContainer {
+        margin-left: 240px;
+    }
+}
+
+@media (max-width: 768px) {
+    .main {
+        margin-left: 200px;
+    }
+
+    .headerContainer {
+        margin-left: 200px;
+    }
+}
+
+@media (max-width: 480px) {
+    .main {
+        margin-left: 60px;
+    }
+
+    .headerContainer {
+        margin-left: 60px;
     }
 }

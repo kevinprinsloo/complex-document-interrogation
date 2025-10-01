@@ -1,7 +1,7 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Helmet } from "react-helmet-async";
-import { Panel, DefaultButton, Spinner } from "@fluentui/react";
+import { Panel, DefaultButton, Spinner, PanelType } from "@fluentui/react";
 
 import styles from "./Ask.module.css";
 
@@ -14,6 +14,8 @@ import { SettingsButton } from "../../components/SettingsButton/SettingsButton";
 import { useLogin, getToken, requireAccessControl } from "../../authConfig";
 import { UploadFile } from "../../components/UploadFile";
 import { Settings } from "../../components/Settings/Settings";
+import { FilterCriteria } from "../../components/FilterModal/FilterModal";
+import settingsStyles from "../../components/Settings/Settings.module.css";
 import { useMsal } from "@azure/msal-react";
 import { TokenClaimsDisplay } from "../../components/TokenClaimsDisplay";
 import { LoginContext } from "../../loginContext";
@@ -38,8 +40,18 @@ export function Component(): JSX.Element {
     const [sendTextSources, setSendTextSources] = useState<boolean>(true);
     const [sendImageSources, setSendImageSources] = useState<boolean>(false);
     const [includeCategory, setIncludeCategory] = useState<string>("");
+    const [includeDocumentType, setIncludeDocumentType] = useState<string>("");
+    const [includeYear, setIncludeYear] = useState<string>("");
+    const [includeVendor, setIncludeVendor] = useState<string>("");
 
     const [excludeCategory, setExcludeCategory] = useState<string>("");
+    const [advancedFilters, setAdvancedFilters] = useState<FilterCriteria>({
+        category: [],
+        documenttype: [],
+        year: [],
+        vendor: [],
+        selectedFiles: []
+    });
     const [question, setQuestion] = useState<string>("");
     const [searchTextEmbeddings, setSearchTextEmbeddings] = useState<boolean>(true);
     const [searchImageEmbeddings, setSearchImageEmbeddings] = useState<boolean>(false);
@@ -145,6 +157,9 @@ export function Component(): JSX.Element {
                         prompt_template_prefix: promptTemplatePrefix.length === 0 ? undefined : promptTemplatePrefix,
                         prompt_template_suffix: promptTemplateSuffix.length === 0 ? undefined : promptTemplateSuffix,
                         include_category: includeCategory.length === 0 ? undefined : includeCategory,
+                        include_document_type: includeDocumentType.length === 0 ? undefined : includeDocumentType,
+                        include_year: includeYear.length === 0 ? undefined : includeYear,
+                        include_vendor: includeVendor.length === 0 ? undefined : includeVendor,
                         exclude_category: excludeCategory.length === 0 ? undefined : excludeCategory,
                         top: retrieveCount,
                         results_merge_strategy: resultsMergeStrategy,
@@ -226,6 +241,15 @@ export function Component(): JSX.Element {
                 break;
             case "includeCategory":
                 setIncludeCategory(value);
+                break;
+            case "includeDocumentType":
+                setIncludeDocumentType(value);
+                break;
+            case "includeYear":
+                setIncludeYear(value);
+                break;
+            case "includeVendor":
+                setIncludeVendor(value);
                 break;
             case "useOidSecurityFilter":
                 setUseOidSecurityFilter(value);
@@ -357,6 +381,8 @@ export function Component(): JSX.Element {
                 closeButtonAriaLabel={t("labels.closeButton")}
                 onRenderFooterContent={() => <DefaultButton onClick={() => setIsConfigPanelOpen(false)}>{t("labels.closeButton")}</DefaultButton>}
                 isFooterAtBottom={true}
+                className={settingsStyles.widePanel}
+                type={PanelType.medium}
             >
                 <Settings
                     promptTemplate={promptTemplate}
@@ -374,6 +400,9 @@ export function Component(): JSX.Element {
                     reasoningEffort={reasoningEffort}
                     excludeCategory={excludeCategory}
                     includeCategory={includeCategory}
+                    includeDocumentType={includeDocumentType}
+                    includeYear={includeYear}
+                    includeVendor={includeVendor}
                     retrievalMode={retrievalMode}
                     sendTextSources={sendTextSources}
                     sendImageSources={sendImageSources}
@@ -391,6 +420,8 @@ export function Component(): JSX.Element {
                     requireAccessControl={requireAccessControl}
                     showAgenticRetrievalOption={showAgenticRetrievalOption}
                     useAgenticRetrieval={useAgenticRetrieval}
+                    advancedFilters={advancedFilters}
+                    onAdvancedFiltersChange={setAdvancedFilters}
                     onChange={handleSettingsChange}
                 />
                 {useLogin && <TokenClaimsDisplay />}

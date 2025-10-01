@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { Helmet } from "react-helmet-async";
-import { Panel, DefaultButton } from "@fluentui/react";
+import { Panel, DefaultButton, PanelType } from "@fluentui/react";
 import readNDJSONStream from "ndjson-readablestream";
 
 import appLogo from "../../assets/applogo.svg";
@@ -10,7 +10,6 @@ import styles from "./Chat.module.css";
 import { chatApi, configApi, RetrievalMode, ChatAppResponse, ChatAppResponseOrError, ChatAppRequest, ResponseMessage, SpeechConfig } from "../../api";
 import { Answer, AnswerError, AnswerLoading } from "../../components/Answer";
 import { QuestionInput } from "../../components/QuestionInput";
-import { ExampleList } from "../../components/Example";
 import { UserChatMessage } from "../../components/UserChatMessage";
 import { AnalysisPanel, AnalysisPanelTabs } from "../../components/AnalysisPanel";
 import { HistoryPanel } from "../../components/HistoryPanel";
@@ -23,12 +22,17 @@ import { useLogin, getToken, requireAccessControl } from "../../authConfig";
 import { useMsal } from "@azure/msal-react";
 import { TokenClaimsDisplay } from "../../components/TokenClaimsDisplay";
 import { LoginContext } from "../../loginContext";
-import { LanguagePicker } from "../../i18n/LanguagePicker";
 import { Settings } from "../../components/Settings/Settings";
+import { FilterCriteria } from "../../components/FilterModal/FilterModal";
+import { ProcessingPanel } from "../../components/ProcessingPanel";
+import { useProcessingSteps } from "../../hooks/useProcessingSteps";
+import settingsStyles from "../../components/Settings/Settings.module.css";
 
 const Chat = () => {
     const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
     const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
+    const [isProcessingPanelOpen, setIsProcessingPanelOpen] = useState(false);
+    const { steps, currentStep, isProcessing, addStep, updateStep, clearSteps, setProcessing } = useProcessingSteps();
     const [promptTemplate, setPromptTemplate] = useState<string>("");
     const [temperature, setTemperature] = useState<number>(0.3);
     const [seed, setSeed] = useState<number | null>(null);
@@ -44,7 +48,18 @@ const Chat = () => {
     const [shouldStream, setShouldStream] = useState<boolean>(true);
     const [useSemanticCaptions, setUseSemanticCaptions] = useState<boolean>(false);
     const [includeCategory, setIncludeCategory] = useState<string>("");
+    const [includeDocumentType, setIncludeDocumentType] = useState<string>("");
+    const [includeYear, setIncludeYear] = useState<string>("");
+    const [includeVendor, setIncludeVendor] = useState<string>("");
     const [excludeCategory, setExcludeCategory] = useState<string>("");
+    const [advancedFilters, setAdvancedFilters] = useState<FilterCriteria>({
+        category: [],
+        documenttype: [],
+        year: [],
+        vendor: [],
+        selectedFiles: [],
+        selectedPrompt: ''
+    });
     const [useSuggestFollowupQuestions, setUseSuggestFollowupQuestions] = useState<boolean>(false);
     const [searchTextEmbeddings, setSearchTextEmbeddings] = useState<boolean>(true);
     const [searchImageEmbeddings, setSearchImageEmbeddings] = useState<boolean>(false);
@@ -154,8 +169,24 @@ const Chat = () => {
         };
         try {
             setIsStreaming(true);
+            setProcessing(true);
             for await (const event of readNDJSONStream(responseBody)) {
-                if (event["context"] && event["context"]["data_points"]) {
+                if (event["processing_step"]) {
+                    // Handle processing step
+                    const step = event["processing_step"];
+                    addStep({
+                        id: step.id,
+                        title: step.title,
+                        status: step.status,
+                        details: step.details,
+                        timestamp: new Date(step.timestamp * 1000), // Convert from Unix timestamp
+                        metadata: step.metadata
+                    });
+                    // Auto-open processing panel when first step arrives
+                    if (!isProcessingPanelOpen) {
+                        setIsProcessingPanelOpen(true);
+                    }
+                } else if (event["context"] && event["context"]["data_points"]) {
                     event["message"] = event["delta"];
                     askResponse = event as ChatAppResponse;
                 } else if (event["delta"] && event["delta"]["content"]) {
@@ -170,6 +201,7 @@ const Chat = () => {
             }
         } finally {
             setIsStreaming(false);
+            setProcessing(false);
         }
         const fullResponse: ChatAppResponse = {
             ...askResponse,
@@ -204,12 +236,20 @@ const Chat = () => {
                 { content: a[1].message.content, role: "assistant" }
             ]);
 
+            // Debug logging for advanced filters
+            console.log('DEBUG: advancedFilters state:', advancedFilters);
+            console.log('DEBUG: selectedFiles:', advancedFilters.selectedFiles);
+            console.log('DEBUG: selectedFiles length:', advancedFilters.selectedFiles.length);
+            if (advancedFilters.selectedFiles.length > 0) {
+                console.log('DEBUG: first selectedFile full:', advancedFilters.selectedFiles[0]);
+                console.log('DEBUG: first selectedFile length:', advancedFilters.selectedFiles[0].length);
+            }
+            
             const request: ChatAppRequest = {
                 messages: [...messages, { content: question, role: "user" }],
                 context: {
                     overrides: {
                         prompt_template: promptTemplate.length === 0 ? undefined : promptTemplate,
-                        include_category: includeCategory.length === 0 ? undefined : includeCategory,
                         exclude_category: excludeCategory.length === 0 ? undefined : excludeCategory,
                         top: retrieveCount,
                         results_merge_strategy: resultsMergeStrategy,
@@ -230,12 +270,22 @@ const Chat = () => {
                         send_image_sources: sendImageSources,
                         language: i18n.language,
                         use_agentic_retrieval: useAgenticRetrieval,
+                        selected_prompt: advancedFilters.selectedPrompt && advancedFilters.selectedPrompt !== '' ? advancedFilters.selectedPrompt : undefined,
+                        // Advanced filters - multi-select arrays
+                        include_categories: advancedFilters.category.length > 0 ? advancedFilters.category : undefined,
+                        include_document_types: advancedFilters.documenttype.length > 0 ? advancedFilters.documenttype : undefined,
+                        include_years: advancedFilters.year.length > 0 ? advancedFilters.year : undefined,
+                        include_vendors: advancedFilters.vendor.length > 0 ? advancedFilters.vendor : undefined,
+                        selected_files: advancedFilters.selectedFiles.length > 0 ? advancedFilters.selectedFiles : undefined,
                         ...(seed !== null ? { seed: seed } : {})
                     }
                 },
                 // AI Chat Protocol: Client must pass on any session state received from the server
                 session_state: answers.length ? answers[answers.length - 1][1].session_state : null
             };
+            
+            // Debug log the final request
+            console.log('DEBUG: Final request overrides:', request.context?.overrides);
 
             const response = await chatApi(request, shouldStream, token);
             if (!response.body) {
@@ -280,6 +330,8 @@ const Chat = () => {
         setStreamedAnswers([]);
         setIsLoading(false);
         setIsStreaming(false);
+        clearSteps();
+        setIsProcessingPanelOpen(false);
     };
 
     useEffect(() => chatMessageStreamEnd.current?.scrollIntoView({ behavior: "smooth" }), [isLoading]);
@@ -329,6 +381,15 @@ const Chat = () => {
             case "includeCategory":
                 setIncludeCategory(value);
                 break;
+            case "includeDocumentType":
+                setIncludeDocumentType(value);
+                break;
+            case "includeYear":
+                setIncludeYear(value);
+                break;
+            case "includeVendor":
+                setIncludeVendor(value);
+                break;
             case "useOidSecurityFilter":
                 setUseOidSecurityFilter(value);
                 break;
@@ -364,9 +425,6 @@ const Chat = () => {
         }
     };
 
-    const onExampleClicked = (example: string) => {
-        makeApiRequest(example);
-    };
 
     const onShowCitation = (citation: string, index: number) => {
         if (activeCitation === citation && activeAnalysisPanelTab === AnalysisPanelTabs.CitationTab && selectedAnswer === index) {
@@ -406,20 +464,25 @@ const Chat = () => {
                 <div className={styles.commandsContainer}>
                     <ClearChatButton className={styles.commandButton} onClick={clearChat} disabled={!lastQuestionRef.current || isLoading} />
                     {showUserUpload && <UploadFile className={styles.commandButton} disabled={!loggedIn} />}
+                    <button 
+                        className={styles.commandButton}
+                        onClick={() => setIsProcessingPanelOpen(!isProcessingPanelOpen)}
+                        title="View AI Processing Steps"
+                        disabled={steps.length === 0 && !isProcessing}
+                    >
+                        🧠
+                    </button>
                     <SettingsButton className={styles.commandButton} onClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)} />
                 </div>
             </div>
             <div className={styles.chatRoot} style={{ marginLeft: isHistoryPanelOpen ? "300px" : "0" }}>
-                <div className={styles.chatContainer}>
+                <div className={`${styles.chatContainer} ${isProcessingPanelOpen ? styles.withProcessingPanel : ""}`}>
                     {!lastQuestionRef.current ? (
                         <div className={styles.chatEmptyState}>
                             <img src={appLogo} alt="App logo" width="120" height="120" />
 
-                            <h1 className={styles.chatEmptyStateTitle}>{t("chatEmptyStateTitle")}</h1>
+                            <h3 className={styles.chatEmptyStateTitle}>{t("chatEmptyStateTitle")}</h3>
                             <h2 className={styles.chatEmptyStateSubtitle}>{t("chatEmptyStateSubtitle")}</h2>
-                            {showLanguagePicker && <LanguagePicker onLanguageChange={newLang => i18n.changeLanguage(newLang)} />}
-
-                            <ExampleList onExampleClicked={onExampleClicked} useMultimodalAnswering={showMultimodalOptions} />
                         </div>
                     ) : (
                         <div className={styles.chatMessageStream}>
@@ -496,6 +559,7 @@ const Chat = () => {
                             disabled={isLoading}
                             onSend={question => makeApiRequest(question)}
                             showSpeechInput={showSpeechInput}
+                            onSettingsClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)}
                         />
                     </div>
                 </div>
@@ -533,6 +597,8 @@ const Chat = () => {
                     closeButtonAriaLabel={t("labels.closeButton")}
                     onRenderFooterContent={() => <DefaultButton onClick={() => setIsConfigPanelOpen(false)}>{t("labels.closeButton")}</DefaultButton>}
                     isFooterAtBottom={true}
+                    className={settingsStyles.widePanel}
+                    type={PanelType.medium}
                 >
                     <Settings
                         promptTemplate={promptTemplate}
@@ -548,6 +614,9 @@ const Chat = () => {
                         reasoningEffort={reasoningEffort}
                         excludeCategory={excludeCategory}
                         includeCategory={includeCategory}
+                        includeDocumentType={includeDocumentType}
+                        includeYear={includeYear}
+                        includeVendor={includeVendor}
                         retrievalMode={retrievalMode}
                         showMultimodalOptions={showMultimodalOptions}
                         sendTextSources={sendTextSources}
@@ -569,10 +638,23 @@ const Chat = () => {
                         showSuggestFollowupQuestions={true}
                         showAgenticRetrievalOption={showAgenticRetrievalOption}
                         useAgenticRetrieval={useAgenticRetrieval}
+                        showLanguagePicker={showLanguagePicker}
+                        advancedFilters={advancedFilters}
+                        onAdvancedFiltersChange={setAdvancedFilters}
                         onChange={handleSettingsChange}
                     />
                     {useLogin && <TokenClaimsDisplay />}
                 </Panel>
+
+                {isProcessingPanelOpen && (
+                    <ProcessingPanel
+                        isOpen={isProcessingPanelOpen}
+                        isProcessing={isProcessing}
+                        steps={steps}
+                        currentStep={currentStep}
+                        onDismiss={() => setIsProcessingPanelOpen(false)}
+                    />
+                )}
             </div>
         </div>
     );

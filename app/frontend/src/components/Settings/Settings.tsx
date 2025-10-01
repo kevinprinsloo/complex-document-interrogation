@@ -1,8 +1,12 @@
 import { useId } from "@fluentui/react-hooks";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TextField, ITextFieldProps, Checkbox, ICheckboxProps, Dropdown, IDropdownProps, IDropdownOption, Stack } from "@fluentui/react";
+import { TextField, ITextFieldProps, Checkbox, ICheckboxProps, Dropdown, IDropdownProps, IDropdownOption, Stack, PrimaryButton } from "@fluentui/react";
+import { Search20Regular } from "@fluentui/react-icons";
+import { LanguagePicker } from "../../i18n/LanguagePicker";
 import { HelpCallout } from "../HelpCallout";
 import { VectorSettings } from "../VectorSettings";
+import { FilterModal, FilterCriteria } from "../FilterModal/FilterModal";
 import { RetrievalMode } from "../../api";
 import styles from "./Settings.module.css";
 
@@ -23,6 +27,9 @@ export interface SettingsProps {
     reasoningEffort: string;
     excludeCategory: string;
     includeCategory: string;
+    includeDocumentType: string;
+    includeYear: string;
+    includeVendor: string;
     retrievalMode: RetrievalMode;
     sendTextSources: boolean;
     sendImageSources: boolean;
@@ -48,6 +55,10 @@ export interface SettingsProps {
     showSuggestFollowupQuestions?: boolean;
     showAgenticRetrievalOption: boolean;
     useAgenticRetrieval: boolean;
+    showLanguagePicker?: boolean;
+    // New filter-related props
+    advancedFilters?: FilterCriteria;
+    onAdvancedFiltersChange?: (filters: FilterCriteria) => void;
 }
 
 export const Settings = ({
@@ -64,6 +75,9 @@ export const Settings = ({
     reasoningEffort,
     excludeCategory,
     includeCategory,
+    includeDocumentType,
+    includeYear,
+    includeVendor,
     retrievalMode,
     searchTextEmbeddings,
     searchImageEmbeddings,
@@ -88,9 +102,23 @@ export const Settings = ({
     promptTemplateSuffix,
     showSuggestFollowupQuestions,
     showAgenticRetrievalOption,
-    useAgenticRetrieval
+    useAgenticRetrieval,
+    showLanguagePicker,
+    advancedFilters,
+    onAdvancedFiltersChange
 }: SettingsProps) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+    
+    // Initialize advanced filters if not provided
+    const currentAdvancedFilters: FilterCriteria = advancedFilters || {
+        category: includeCategory ? [includeCategory] : [],
+        documenttype: includeDocumentType ? [includeDocumentType] : [],
+        year: includeYear ? [includeYear] : [],
+        vendor: includeVendor ? [includeVendor] : [],
+        selectedFiles: [],
+        selectedPrompt: ''
+    };
 
     // Form field IDs
     const promptTemplateId = useId("promptTemplate");
@@ -112,6 +140,12 @@ export const Settings = ({
     const includeCategoryFieldId = useId("includeCategoryField");
     const excludeCategoryId = useId("excludeCategory");
     const excludeCategoryFieldId = useId("excludeCategoryField");
+    const includeDocumentTypeId = useId("includeDocumentType");
+    const includeDocumentTypeFieldId = useId("includeDocumentTypeField");
+    const includeYearId = useId("includeYear");
+    const includeYearFieldId = useId("includeYearField");
+    const includeVendorId = useId("includeVendor");
+    const includeVendorFieldId = useId("includeVendorField");
     const semanticRankerId = useId("semanticRanker");
     const semanticRankerFieldId = useId("semanticRankerField");
     const queryRewritingFieldId = useId("queryRewritingField");
@@ -132,8 +166,9 @@ export const Settings = ({
     );
 
     return (
-        <div className={className}>
-            <h3 className={styles.sectionHeader}>{t("overallSettings")}</h3>
+        <div className={`${styles.settingsContainer} ${className}`}>
+            <div className={styles.settingsSection}>
+                <h3 className={styles.sectionHeader}>⚙️ {t("overallSettings")}</h3>
 
             {shouldStream !== undefined && (
                 <Checkbox
@@ -162,7 +197,16 @@ export const Settings = ({
                 />
             )}
 
-            <h3 className={styles.sectionHeader}>{t("searchSettings")}</h3>
+            {showLanguagePicker && (
+                <div className={styles.settingsSeparator}>
+                    <h4 className={styles.subsectionHeader}>Language Settings</h4>
+                    <LanguagePicker onLanguageChange={newLang => i18n.changeLanguage(newLang)} />
+                </div>
+            )}
+            </div>
+
+            <div className={styles.settingsSection}>
+                <h3 className={styles.sectionHeader}><Search20Regular style={{ marginRight: '8px', verticalAlign: 'middle' }} />{t("searchSettings")}</h3>
 
             {showAgenticRetrievalOption && (
                 <Checkbox
@@ -234,19 +278,52 @@ export const Settings = ({
                 aria-labelledby={retrieveCountId}
                 onRenderLabel={props => renderLabel(props, retrieveCountId, retrieveCountFieldId, t("helpTexts.retrieveNumber"))}
             />
-            <Dropdown
-                id={includeCategoryFieldId}
-                className={styles.settingsSeparator}
-                label={t("labels.includeCategory")}
-                selectedKey={includeCategory}
-                onChange={(_ev?: React.FormEvent<HTMLElement | HTMLInputElement>, option?: IDropdownOption) => onChange("includeCategory", option?.key || "")}
-                aria-labelledby={includeCategoryId}
-                options={[
-                    { key: "", text: t("labels.includeCategoryOptions.all") }
-                    // { key: "example", text: "Example Category" } // Add more categories as needed
-                ]}
-                onRenderLabel={props => renderLabel(props, includeCategoryId, includeCategoryFieldId, t("helpTexts.includeCategory"))}
-            />
+            {/* Advanced Filters Section */}
+            <div className={styles.settingsSeparator}>
+                <h4 className={styles.subsectionHeader}>Document Filters</h4>
+                <p className={styles.filterDescription}>
+                    Use advanced filters to narrow down your search results by category, document type, year, vendor, or specific files.
+                </p>
+                
+                {/* Current filter summary */}
+                {(currentAdvancedFilters.category.length > 0 || 
+                    currentAdvancedFilters.documenttype.length > 0 || 
+                    currentAdvancedFilters.year.length > 0 || 
+                    currentAdvancedFilters.vendor.length > 0 || 
+                    currentAdvancedFilters.selectedFiles.length > 0 ||
+                    (currentAdvancedFilters.selectedPrompt && currentAdvancedFilters.selectedPrompt !== '')) && (
+                    <div className={styles.currentFiltersDisplay}>
+                        <strong>Active Filters:</strong>
+                        {currentAdvancedFilters.category.length > 0 && (
+                            <span className={styles.filterSummary}>Categories: {currentAdvancedFilters.category.join(', ')}</span>
+                        )}
+                        {currentAdvancedFilters.documenttype.length > 0 && (
+                            <span className={styles.filterSummary}>Types: {currentAdvancedFilters.documenttype.join(', ')}</span>
+                        )}
+                        {currentAdvancedFilters.year.length > 0 && (
+                            <span className={styles.filterSummary}>Years: {currentAdvancedFilters.year.join(', ')}</span>
+                        )}
+                        {currentAdvancedFilters.vendor.length > 0 && (
+                            <span className={styles.filterSummary}>Vendors: {currentAdvancedFilters.vendor.join(', ')}</span>
+                        )}
+                        {currentAdvancedFilters.selectedFiles.length > 0 && (
+                            <span className={styles.filterSummary}>Files: {currentAdvancedFilters.selectedFiles.length} selected</span>
+                        )}
+                        {currentAdvancedFilters.selectedPrompt && currentAdvancedFilters.selectedPrompt !== '' && (
+                            <span className={styles.filterSummary}>Custom Prompt: {currentAdvancedFilters.selectedPrompt}</span>
+                        )}
+                    </div>
+                )}
+                
+                <PrimaryButton
+                    text="Configure Advanced Filters"
+                    onClick={() => setIsFilterModalOpen(true)}
+                    iconProps={{ iconName: 'Filter' }}
+                    className={styles.advancedFiltersButton}
+                />
+            </div>
+            
+            {/* Legacy single-select dropdowns - kept for backward compatibility */}
             <TextField
                 id={excludeCategoryFieldId}
                 className={styles.settingsSeparator}
@@ -352,7 +429,6 @@ export const Settings = ({
                 </>
             )}
 
-            <h3 className={styles.sectionHeader}>{t("llmSettings")}</h3>
             <TextField
                 id={promptTemplateFieldId}
                 className={styles.settingsSeparator}
@@ -412,6 +488,50 @@ export const Settings = ({
                         />
                     </Stack>
                 </fieldset>
+            )}
+            </div>
+            
+            {/* Filter Modal */}
+            {onAdvancedFiltersChange && (
+                <FilterModal
+                    isOpen={isFilterModalOpen}
+                    onDismiss={() => setIsFilterModalOpen(false)}
+                    selectedFilters={currentAdvancedFilters}
+                    onFiltersChange={(filters) => {
+                        // Update legacy single-select fields for backward compatibility
+                        if (filters.category.length > 0 && filters.category[0] !== includeCategory) {
+                            onChange("includeCategory", filters.category[0]);
+                        } else if (filters.category.length === 0 && includeCategory) {
+                            onChange("includeCategory", "");
+                        }
+                        
+                        if (filters.documenttype.length > 0 && filters.documenttype[0] !== includeDocumentType) {
+                            onChange("includeDocumentType", filters.documenttype[0]);
+                        } else if (filters.documenttype.length === 0 && includeDocumentType) {
+                            onChange("includeDocumentType", "");
+                        }
+                        
+                        if (filters.year.length > 0 && filters.year[0] !== includeYear) {
+                            onChange("includeYear", filters.year[0]);
+                        } else if (filters.year.length === 0 && includeYear) {
+                            onChange("includeYear", "");
+                        }
+                        
+                        if (filters.vendor.length > 0 && filters.vendor[0] !== includeVendor) {
+                            onChange("includeVendor", filters.vendor[0]);
+                        } else if (filters.vendor.length === 0 && includeVendor) {
+                            onChange("includeVendor", "");
+                        }
+                        
+                        // Call the advanced filters change handler
+                        onAdvancedFiltersChange(filters);
+                    }}
+                    onApplyFilters={(filters) => {
+                        if (onAdvancedFiltersChange) {
+                            onAdvancedFiltersChange(filters);
+                        }
+                    }}
+                />
             )}
         </div>
     );

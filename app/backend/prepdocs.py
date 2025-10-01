@@ -466,7 +466,7 @@ if __name__ == "__main__":
             use_agentic_retrieval=use_agentic_retrieval,
             agent_name=os.getenv("AZURE_SEARCH_AGENT"),
             agent_max_output_tokens=int(os.getenv("AZURE_SEARCH_AGENT_MAX_OUTPUT_TOKENS", 10000)),
-            azure_openai_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+            azure_openai_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
             azure_openai_searchagent_deployment=os.getenv("AZURE_OPENAI_SEARCHAGENT_DEPLOYMENT"),
             azure_openai_searchagent_model=os.getenv("AZURE_OPENAI_SEARCHAGENT_MODEL"),
             azure_credential=azd_credential,
@@ -579,6 +579,19 @@ if __name__ == "__main__":
             use_multimodal=use_multimodal,
         )
 
+        # Initialize metadata extractor for AI-powered metadata extraction
+        metadata_extractor = None
+        extract_ai_metadata = False
+        if openai_client:
+            from prepdocslib.metadata_extractor import MetadataExtractor
+            metadata_extractor = MetadataExtractor(
+                openai_client=openai_client,
+                model_name=os.getenv("AZURE_OPENAI_CHATGPT_MODEL", "gpt-4"),
+                deployment_name=os.getenv("AZURE_OPENAI_CHATGPT_DEPLOYMENT")
+            )
+            extract_ai_metadata = True
+            logger.info("AI metadata extraction enabled")
+
         ingestion_strategy = FileStrategy(
             search_info=search_info,
             list_file_strategy=list_file_strategy,
@@ -594,6 +607,8 @@ if __name__ == "__main__":
             category=args.category,
             use_content_understanding=use_content_understanding,
             content_understanding_endpoint=os.getenv("AZURE_CONTENTUNDERSTANDING_ENDPOINT"),
+            metadata_extractor=metadata_extractor,
+            extract_ai_metadata=extract_ai_metadata,
         )
 
     try:

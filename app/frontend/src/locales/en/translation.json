@@ -1,6 +1,6 @@
 {
-    "pageTitle": "Azure OpenAI + AI Search",
-    "headerTitle": "Azure OpenAI + AI Search",
+    "pageTitle": "Veritas - Document Intelligence",
+    "headerTitle": "Veritas - Document Intelligence",
     "chat": "Chat",
     "qa": "Ask a question",
     "login": "Login",
@@ -34,20 +34,20 @@
     },
     "developerSettings": "Developer settings",
 
-    "chatEmptyStateTitle": "Chat with your data",
-    "chatEmptyStateSubtitle": "Ask anything or try an example",
+    "chatEmptyStateTitle": "Ask Veritas AI",
+    "chatEmptyStateSubtitle": "",
     "defaultExamples": {
         "1": "What is included in my Northwind Health Plus plan that is not in standard?",
         "2": "What happens in a performance review?",
         "3": "What does a Product Manager do?",
-        "placeholder": "Type a new question (e.g. does my plan cover annual eye exams?)"
+        "placeholder": "Ask Document Intelligence"
     },
     "askTitle": "Ask your data",
     "multimodalExamples": {
         "1": "Compare the impact of interest rates and GDP in financial markets.",
         "2": "What is the expected trend for the S&P 500 index over the next five years? Compare it to the past S&P 500 performance",
         "3": "Can you identify any correlation between oil prices and stock market trends?",
-        "placeholder": "Example: Does my plan cover annual eye exams?"
+        "placeholder": "Let's begin"
     },
     "generatingAnswer": "Generating answer",
     "citationWithColon": "Citation:",
@@ -93,6 +93,18 @@
             "all": "All"
         },
         "excludeCategory": "Exclude category",
+        "includeDocumentType": "Include document type",
+        "includeDocumentTypeOptions": {
+            "all": "All"
+        },
+        "includeYear": "Include year",
+        "includeYearOptions": {
+            "all": "All"
+        },
+        "includeVendor": "Include vendor",
+        "includeVendorOptions": {
+            "all": "All"
+        },
         "useSemanticRanker": "Use semantic ranker for retrieval",
         "useSemanticCaptions": "Use semantic captions",
         "useQueryRewriting": "Use query rewriting for retrieval",
@@ -149,6 +161,12 @@
             "Specifies a category to include in the search results. There are no categories used in the default data set.",
          "excludeCategory":
             "Specifies a category to exclude from the search results. There are no categories used in the default data set.",
+         "includeDocumentType":
+            "Specifies a document type to include in the search results. Document types are extracted automatically by AI during ingestion.",
+         "includeYear":
+            "Specifies a year to include in the search results. Years are extracted automatically by AI during ingestion.",
+         "includeVendor":
+            "Specifies a vendor/company to include in the search results. Vendor names are extracted automatically by AI during ingestion.",
          "useSemanticReranker":
             "Enables the Azure AI Search semantic ranker, a model that re-ranks search results based on semantic similarity to the user's query.",
         "useQueryRewriting":

@@ -1,0 +1,482 @@
+.modalContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  backdrop-filter: blur(12px);
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.filterIcon {
+  font-size: 1.5rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.modalContent {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 20px;
+  box-shadow: 0 32px 64px rgba(15, 23, 42, 0.3), 0 0 0 1px rgba(148, 163, 184, 0.2);
+  width: 90vw;
+  max-width: 950px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  border: 2px solid rgba(148, 163, 184, 0.2);
+  overflow: hidden;
+  backdrop-filter: blur(20px);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 36px;
+  border-bottom: 2px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.modalHeader::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.modalTitle {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: white;
+  position: relative;
+  z-index: 1;
+}
+
+.modalTitle h2 {
+  margin: 0;
+  font-size: 1.625rem;
+  font-weight: 600;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  letter-spacing: -0.015em;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+.closeButton {
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  cursor: pointer;
+  padding: 14px;
+  border-radius: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(10px);
+  position: relative;
+  z-index: 1;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.closeButton:hover {
+  background: rgba(239, 68, 68, 0.8);
+  color: white;
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.modalBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 36px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.modalBody::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modalBody::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.modalBody::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.modalBody::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+}
+
+.errorMessage {
+  margin-bottom: 16px;
+}
+
+.filterSection {
+  margin-bottom: 32px;
+  background: white;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 8px 25px rgba(15, 23, 42, 0.08), 0 3px 10px rgba(15, 23, 42, 0.05);
+  border: 2px solid rgba(148, 163, 184, 0.15);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.filterSection:hover {
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.12), 0 6px 16px rgba(15, 23, 42, 0.08);
+  transform: translateY(-3px);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.filterSection::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #1e293b 0%, #334155 50%, #475569 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.filterSection:hover::before {
+  opacity: 1;
+}
+
+.filterSection h3 {
+  margin: 0 0 24px 0;
+  font-size: 1.375rem;
+  font-weight: 600;
+  color: #1e293b;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 16px;
+  position: relative;
+  letter-spacing: -0.02em;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+.filterSection h3::before {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, #1e293b 0%, #334155 50%, #475569 100%);
+  border-radius: 2px;
+}
+
+.filterGroup {
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.filterLabel {
+  display: block;
+  margin-bottom: 14px;
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+.multiSelectContainer {
+  width: 100%;
+  position: relative;
+}
+
+.multiSelectContainer .ms-Dropdown {
+  border-radius: 12px;
+  border: 2px solid #e2e8f0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: white;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.04);
+}
+
+.multiSelectContainer .ms-Dropdown:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.08);
+}
+
+.multiSelectContainer .ms-Dropdown:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15), 0 4px 12px rgba(15, 23, 42, 0.1);
+}
+
+.selectedFiltersContainer {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  border: 2px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  padding: 24px;
+  margin-top: 28px;
+  box-shadow: inset 0 3px 6px rgba(15, 23, 42, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.selectedFiltersContainer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #1e293b 0%, #334155 50%, #475569 100%);
+}
+
+.selectedFiltersTitle {
+  margin: 0 0 20px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+.noFiltersText {
+  margin: 0;
+  color: #6b7280;
+  font-style: italic;
+  font-size: 0.875rem;
+}
+
+.selectedFilterGroup {
+  margin-bottom: 12px;
+}
+
+.selectedFilterKey {
+  display: inline-block;
+  font-weight: 600;
+  color: #374151;
+  margin-right: 8px;
+  font-size: 0.875rem;
+}
+
+.selectedFilterValue {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #e2e8f0;
+  color: #475569;
+  padding: 10px 16px;
+  border-radius: 24px;
+  margin: 6px 8px 6px 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 3px 6px rgba(15, 23, 42, 0.1), 0 1px 3px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+.selectedFilterValue:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.15), 0 2px 6px rgba(15, 23, 42, 0.1);
+}
+
+.selectedFilterValueCategory {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e3a8a;
+  border: 1px solid #3b82f6;
+  box-shadow: 0 3px 6px rgba(59, 130, 246, 0.2);
+}
+
+.selectedFilterValueDocumenttype {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #14532d;
+  border: 1px solid #22c55e;
+  box-shadow: 0 3px 6px rgba(34, 197, 94, 0.2);
+}
+
+.selectedFilterValueYear {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #78350f;
+  border: 1px solid #f59e0b;
+  box-shadow: 0 3px 6px rgba(245, 158, 11, 0.2);
+}
+
+.selectedFilterValueVendor {
+  background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+  color: #9d174d;
+  border: 1px solid #ec4899;
+  box-shadow: 0 3px 6px rgba(236, 72, 153, 0.2);
+}
+
+.selectedFilterValueSelectedFiles {
+  background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+  color: #6b21a8;
+  border: 1px solid #8b5cf6;
+  box-shadow: 0 3px 6px rgba(139, 92, 246, 0.2);
+}
+
+.selectedFilterValueSelectedPrompt {
+  background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
+  color: #581c87;
+  border: 1px solid #7c3aed;
+  box-shadow: 0 3px 6px rgba(124, 58, 237, 0.2);
+}
+
+.singleSelectContainer {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.singleSelectContainer .ms-Dropdown {
+  border-radius: 12px;
+  border: 2px solid #e2e8f0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: white;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.04);
+}
+
+.singleSelectContainer .ms-Dropdown:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.08);
+}
+
+.singleSelectContainer .ms-Dropdown:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15), 0 4px 12px rgba(15, 23, 42, 0.1);
+}
+
+.promptDescription {
+  margin-top: 16px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 2px solid #3b82f6;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  position: relative;
+}
+
+.promptDescription::before {
+  content: '⚖️';
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 1.25rem;
+}
+
+.promptDescription .promptDescriptionText {
+  margin-left: 40px;
+}
+
+.promptDescriptionText {
+  color: #1e40af;
+  line-height: 1.5;
+  font-weight: 500;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+.removeFilterButton {
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  opacity: 0.8;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+  font-weight: bold;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.removeFilterButton:hover {
+  opacity: 1;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  transform: scale(1.15);
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.removeFilterButton:hover {
+  opacity: 1;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28px 36px;
+  border-top: 2px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  backdrop-filter: blur(15px);
+}
+
+.footerButtons {
+  display: flex;
+  gap: 16px;
+}
+
+.footerButtons button {
+  border-radius: 12px;
+  padding: 14px 28px;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px solid transparent;
+  cursor: pointer;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.025em;
+}
+
+.footerButtons button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(15, 23, 42, 0.15);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .modalContent {
+    width: 95vw;
+    max-height: 95vh;
+  }
+  
+  .modalHeader,
+  .modalBody,
+  .modalFooter {
+    padding: 16px;
+  }
+  
+  .modalFooter {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .footerButtons {
+    width: 100%;
+    justify-content: stretch;
+  }
+  
+  .footerButtons button {
+    flex: 1;
+  }
+}

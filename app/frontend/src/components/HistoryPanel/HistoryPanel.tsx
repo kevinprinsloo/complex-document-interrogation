@@ -1,6 +1,6 @@
 import { useMsal } from "@azure/msal-react";
 import { getToken, useLogin } from "../../authConfig";
-import { Panel, PanelType, Spinner } from "@fluentui/react";
+import { Panel, PanelType } from "@fluentui/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HistoryData, HistoryItem } from "../HistoryItem";
 import { Answers, HistoryProviderOptions } from "../HistoryProviders/IProvider";
@@ -71,29 +71,37 @@ export const HistoryPanel = ({
     return (
         <Panel
             type={PanelType.customNear}
-            style={{ padding: "0px" }}
-            headerText={t("history.chatHistory")}
-            customWidth="300px"
-            isBlocking={false}
+            customWidth="400px"
             isOpen={isOpen}
-            onDismiss={() => onClose()}
-            onDismissed={() => {
-                setHistory([]);
-                setHasMoreHistory(true);
-                historyManager.resetContinuationToken();
-            }}
+            onDismiss={onClose}
+            headerText={t("history.chatHistory")}
+            className={styles.wideHistoryPanel}
         >
-            <div>
-                {Object.entries(groupedHistory).map(([group, items]) => (
-                    <div key={group} className={styles.group}>
-                        <p className={styles.groupLabel}>{t(group)}</p>
-                        {items.map(item => (
-                            <HistoryItem key={item.id} item={item} onSelect={handleSelect} onDelete={handleDelete} />
-                        ))}
+            <div className={styles.historyContainer}>
+                {isLoading && (
+                    <div className={styles.loadingSpinner}>
+                        <div>Loading...</div>
                     </div>
-                ))}
-                {isLoading && <Spinner style={{ marginTop: "10px" }} />}
-                {history.length === 0 && !isLoading && <p>{t("history.noHistory")}</p>}
+                )}
+                {!isLoading && Object.keys(groupedHistory).length === 0 && (
+                    <div className={styles.noHistoryMessage}>
+                        {t("history.noHistory")}
+                    </div>
+                )}
+                {!isLoading &&
+                    Object.entries(groupedHistory).map(([group, items]) => (
+                        <div key={group} className={styles.group}>
+                            <div className={styles.groupLabel}>{t(group)}</div>
+                            {items.map(item => (
+                                <HistoryItem
+                                    key={item.id}
+                                    item={item}
+                                    onSelect={() => handleSelect(item.id)}
+                                    onDelete={() => handleDelete(item.id)}
+                                />
+                            ))}
+                        </div>
+                    ))}
                 {hasMoreHistory && !isLoading && <InfiniteLoadingButton func={loadMoreHistory} />}
             </div>
         </Panel>

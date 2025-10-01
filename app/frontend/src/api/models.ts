@@ -11,6 +11,9 @@ export type ChatAppRequestOverrides = {
     query_rewriting?: boolean;
     reasoning_effort?: string;
     include_category?: string;
+    include_document_type?: string;
+    include_year?: string;
+    include_vendor?: string;
     exclude_category?: string;
     seed?: number;
     top?: number;
@@ -30,6 +33,13 @@ export type ChatAppRequestOverrides = {
     search_image_embeddings: boolean;
     language: string;
     use_agentic_retrieval: boolean;
+    selected_prompt?: string;
+    // Advanced multi-select filters
+    include_categories?: string[];
+    include_document_types?: string[];
+    include_years?: string[];
+    include_vendors?: string[];
+    selected_files?: string[];
 };
 
 export type ResponseMessage = {

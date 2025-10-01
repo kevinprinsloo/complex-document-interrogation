@@ -2,27 +2,73 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 4px 8px;
-    border-radius: 6px;
-    transition: background-color 0.2s;
+    padding: 1rem 1.25rem;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    margin-bottom: 0.75rem;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid rgba(229, 231, 235, 0.6);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: hidden;
 }
 
 .historyItem:hover {
-    background-color: #f3f4f6;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #7dd3fc;
+}
+
+.historyItem::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.historyItem:hover::before {
+    opacity: 1;
 }
 
 .historyItemButton {
     flex-grow: 1;
     text-align: left;
     padding: 0;
-    margin-right: 4px;
+    margin-right: 1rem;
     background: none;
     border: none;
     cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+}
+
+.historyItemButton:hover {
+    color: #0369a1;
 }
 
 .historyItemTitle {
     font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+    line-height: 1.4;
+    transition: color 0.3s ease;
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.historyItemTitle::before {
+    content: '💬';
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-size: 0.9rem;
+    opacity: 0.7;
 }
 
 .deleteIcon {
@@ -32,22 +78,28 @@
 
 .deleteButton {
     opacity: 0;
-    transition: opacity 0.2s;
-    background: none;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.8);
     border: none;
     cursor: pointer;
-    padding: 4px;
-    border-radius: 9999px;
+    padding: 8px;
+    border-radius: 50%;
     color: #6b7280;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(229, 231, 235, 0.6);
 }
 
 .historyItem:hover .deleteButton,
 .deleteButton:focus {
     opacity: 1;
+    transform: scale(1.05);
 }
 
 .deleteButton:hover {
-    color: #111827;
+    color: white;
+    background: rgba(239, 68, 68, 0.9);
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
 .modalOverlay {
@@ -64,57 +116,93 @@
 }
 
 .modalContent {
-    background-color: white;
-    padding: 24px;
-    border-radius: 8px;
-    box-shadow:
-        0 4px 6px -1px rgba(0, 0, 0, 0.1),
-        0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    max-width: 400px;
+    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    max-width: 450px;
     width: 100%;
+    border: 1px solid rgba(229, 231, 235, 0.8);
+    position: relative;
+    overflow: hidden;
+}
+
+.modalContent::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
 }
 
 .modalTitle {
-    font-size: 20px;
-    font-weight: 600;
-    margin-top: 0px;
-    margin-bottom: 16px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 1.5rem 0;
+    color: #1f2937;
+    text-align: center;
+    position: relative;
+    padding-left: 2rem;
+}
+
+.modalTitle::before {
+    content: '⚠️';
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-size: 1.5rem;
 }
 
 .modalDescription {
-    margin-top: 0px;
-    margin-bottom: 16px;
+    margin: 0 0 2rem 0;
+    color: #6b7280;
+    line-height: 1.6;
+    text-align: center;
+    font-size: 1rem;
 }
 
 .modalActions {
     display: flex;
-    justify-content: flex-end;
-    gap: 16px;
+    justify-content: center;
+    gap: 1rem;
 }
 
 .modalCancelButton,
 .modalConfirmButton {
-    padding: 8px 16px;
-    border-radius: 4px;
-    font-size: 14px;
-    font-weight: 500;
+    padding: 0.75rem 2rem;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
     cursor: pointer;
+    border: none;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.9rem;
 }
 
 .modalCancelButton {
-    background-color: #f3f4f6;
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
     color: #374151;
+    border: 1px solid #d1d5db;
 }
 
 .modalConfirmButton {
-    background-color: #ef4444;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     color: white;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
 }
 
 .modalCancelButton:hover {
-    background-color: #e5e7eb;
+    background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .modalConfirmButton:hover {
-    background-color: #dc2626;
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.6);
 }

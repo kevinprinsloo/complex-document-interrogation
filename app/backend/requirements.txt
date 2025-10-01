@@ -431,7 +431,6 @@ typing-extensions==4.13.2
     #   pypdf
     #   quart
     #   quart-cors
-    #   rich
     #   taskgroup
     #   uvicorn
 urllib3==2.5.0

@@ -827,7 +827,7 @@ module storage 'core/storage/storage-account.bicep' = {
   }
 }
 
-module userStorage 'core/storage/storage-account.bicep' = if (useUserUpload) {
+module userStorage 'core/storage/storage-account.bicep' = if (shouldAssignUserRoles) {
   name: 'user-storage'
   scope: storageResourceGroup
   params: {
@@ -853,7 +853,7 @@ module userStorage 'core/storage/storage-account.bicep' = if (useUserUpload) {
   }
 }
 
-module cosmosDb 'br/public:avm/res/document-db/database-account:0.6.1' = if (useAuthentication && useChatHistoryCosmos) {
+module cosmosDb 'br/public:avm/res/document-db/database-account:0.6.1' = if (shouldAssignUserRoles) {
   name: 'cosmosdb'
   scope: cosmosDbResourceGroup
   params: {
@@ -933,8 +933,10 @@ module ai 'core/ai/ai-environment.bicep' = if (useAiProject) {
 
 // USER ROLES
 var principalType = empty(runningOnGh) && empty(runningOnAdo) ? 'User' : 'ServicePrincipal'
+// Skip user role assignments if principalId is empty or organization policy prevents user RBAC assignments
+var shouldAssignUserRoles = false
 
-module openAiRoleUser 'core/security/role.bicep' = if (isAzureOpenAiHost && deployAzureOpenAi) {
+module openAiRoleUser 'core/security/role.bicep' = if (isAzureOpenAiHost && deployAzureOpenAi && shouldAssignUserRoles) {
   scope: openAiResourceGroup
   name: 'openai-role-user'
   params: {
@@ -945,7 +947,7 @@ module openAiRoleUser 'core/security/role.bicep' = if (isAzureOpenAiHost && depl
 }
 
 // For both Document Intelligence and AI vision
-module cognitiveServicesRoleUser 'core/security/role.bicep' = {
+module cognitiveServicesRoleUser 'core/security/role.bicep' = if (shouldAssignUserRoles) {
   scope: resourceGroup
   name: 'cognitiveservices-role-user'
   params: {
@@ -955,7 +957,7 @@ module cognitiveServicesRoleUser 'core/security/role.bicep' = {
   }
 }
 
-module speechRoleUser 'core/security/role.bicep' = {
+module speechRoleUser 'core/security/role.bicep' = if (shouldAssignUserRoles) {
   scope: speechResourceGroup
   name: 'speech-role-user'
   params: {
@@ -965,7 +967,7 @@ module speechRoleUser 'core/security/role.bicep' = {
   }
 }
 
-module storageRoleUser 'core/security/role.bicep' = {
+module storageRoleUser 'core/security/role.bicep' = if (shouldAssignUserRoles) {
   scope: storageResourceGroup
   name: 'storage-role-user'
   params: {
@@ -975,7 +977,7 @@ module storageRoleUser 'core/security/role.bicep' = {
   }
 }
 
-module storageContribRoleUser 'core/security/role.bicep' = {
+module storageContribRoleUser 'core/security/role.bicep' = if (shouldAssignUserRoles) {
   scope: storageResourceGroup
   name: 'storage-contrib-role-user'
   params: {
@@ -985,7 +987,7 @@ module storageContribRoleUser 'core/security/role.bicep' = {
   }
 }
 
-module storageOwnerRoleUser 'core/security/role.bicep' = if (useUserUpload) {
+module storageOwnerRoleUser 'core/security/role.bicep' = if (shouldAssignUserRoles) {
   scope: storageResourceGroup
   name: 'storage-owner-role-user'
   params: {
@@ -995,7 +997,7 @@ module storageOwnerRoleUser 'core/security/role.bicep' = if (useUserUpload) {
   }
 }
 
-module searchRoleUser 'core/security/role.bicep' = {
+module searchRoleUser 'core/security/role.bicep' = if (shouldAssignUserRoles) {
   scope: searchServiceResourceGroup
   name: 'search-role-user'
   params: {
@@ -1005,7 +1007,7 @@ module searchRoleUser 'core/security/role.bicep' = {
   }
 }
 
-module searchContribRoleUser 'core/security/role.bicep' = {
+module searchContribRoleUser 'core/security/role.bicep' = if (shouldAssignUserRoles) {
   scope: searchServiceResourceGroup
   name: 'search-contrib-role-user'
   params: {
@@ -1015,7 +1017,7 @@ module searchContribRoleUser 'core/security/role.bicep' = {
   }
 }
 
-module searchSvcContribRoleUser 'core/security/role.bicep' = {
+module searchSvcContribRoleUser 'core/security/role.bicep' = if (shouldAssignUserRoles) {
   scope: searchServiceResourceGroup
   name: 'search-svccontrib-role-user'
   params: {
@@ -1025,7 +1027,7 @@ module searchSvcContribRoleUser 'core/security/role.bicep' = {
   }
 }
 
-module cosmosDbAccountContribRoleUser 'core/security/role.bicep' = if (useAuthentication && useChatHistoryCosmos) {
+module cosmosDbAccountContribRoleUser 'core/security/role.bicep' = if (shouldAssignUserRoles) {
   scope: cosmosDbResourceGroup
   name: 'cosmosdb-account-contrib-role-user'
   params: {
@@ -1037,7 +1039,7 @@ module cosmosDbAccountContribRoleUser 'core/security/role.bicep' = if (useAuthen
 
 // RBAC for Cosmos DB
 // https://learn.microsoft.com/azure/cosmos-db/nosql/security/how-to-grant-data-plane-role-based-access
-module cosmosDbDataContribRoleUser 'core/security/documentdb-sql-role.bicep' = if (useAuthentication && useChatHistoryCosmos) {
+module cosmosDbDataContribRoleUser 'core/security/documentdb-sql-role.bicep' = if (shouldAssignUserRoles) {
   scope: cosmosDbResourceGroup
   name: 'cosmosdb-data-contrib-role-user'
   params: {
@@ -1095,7 +1097,7 @@ module storageRoleBackend 'core/security/role.bicep' = {
   }
 }
 
-module storageOwnerRoleBackend 'core/security/role.bicep' = if (useUserUpload) {
+module storageOwnerRoleBackend 'core/security/role.bicep' = if (shouldAssignUserRoles) {
   scope: storageResourceGroup
   name: 'storage-owner-role-backend'
   params: {
@@ -1155,7 +1157,7 @@ module speechRoleBackend 'core/security/role.bicep' = {
 
 // RBAC for Cosmos DB
 // https://learn.microsoft.com/azure/cosmos-db/nosql/security/how-to-grant-data-plane-role-based-access
-module cosmosDbRoleBackend 'core/security/documentdb-sql-role.bicep' = if (useAuthentication && useChatHistoryCosmos) {
+module cosmosDbRoleBackend 'core/security/documentdb-sql-role.bicep' = if (shouldAssignUserRoles) {
   scope: cosmosDbResourceGroup
   name: 'cosmosdb-role-backend'
   params: {
@@ -1282,7 +1284,7 @@ module searchReaderRoleBackend 'core/security/role.bicep' = if (useAuthenticatio
 }
 
 // Used to add/remove documents from index (required for user upload feature)
-module searchContribRoleBackend 'core/security/role.bicep' = if (useUserUpload) {
+module searchContribRoleBackend 'core/security/role.bicep' = if (shouldAssignUserRoles) {
   scope: searchServiceResourceGroup
   name: 'search-contrib-role-backend'
   params: {
@@ -1308,7 +1310,7 @@ module visionRoleBackend 'core/security/role.bicep' = if (useMultimodal) {
 }
 
 // For document intelligence access by the backend
-module documentIntelligenceRoleBackend 'core/security/role.bicep' = if (useUserUpload) {
+module documentIntelligenceRoleBackend 'core/security/role.bicep' = if (shouldAssignUserRoles) {
   scope: documentIntelligenceResourceGroup
   name: 'documentintelligence-role-backend'
   params: {
@@ -1333,7 +1335,7 @@ output AZURE_OPENAI_CHATGPT_MODEL string = chatGpt.modelName
 
 // Specific to Azure OpenAI
 output AZURE_OPENAI_SERVICE string = isAzureOpenAiHost && deployAzureOpenAi ? openAi.outputs.name : ''
-output AZURE_OPENAI_ENDPOINT string = isAzureOpenAiHost && deployAzureOpenAi ? openAi.outputs.endpoint : ''
+output AZURE_OPENAI_ENDPOINT string = deployAzureOpenAi ? openAi.outputs.endpoint : (openAiHost == 'azure_custom' ? azureOpenAiCustomUrl : '')
 output AZURE_OPENAI_API_VERSION string = isAzureOpenAiHost ? azureOpenAiApiVersion : ''
 output AZURE_OPENAI_RESOURCE_GROUP string = isAzureOpenAiHost ? openAiResourceGroup.name : ''
 output AZURE_OPENAI_CHATGPT_DEPLOYMENT string = isAzureOpenAiHost ? chatGpt.deploymentName : ''
