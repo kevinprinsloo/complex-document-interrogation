@@ -122,7 +122,8 @@ export function Component(): JSX.Element {
             setShowSpeechOutputBrowser(config.showSpeechOutputBrowser);
             setShowSpeechOutputAzure(config.showSpeechOutputAzure);
             setShowAgenticRetrievalOption(config.showAgenticRetrievalOption);
-            setUseAgenticRetrieval(config.showAgenticRetrievalOption);
+            // When agentic retrieval is available, default it to enabled
+            setUseAgenticRetrieval(config.showAgenticRetrievalOption ? true : false);
             if (config.showAgenticRetrievalOption) {
                 setRetrieveCount(10);
             }

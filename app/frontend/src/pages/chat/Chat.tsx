@@ -58,7 +58,7 @@ const Chat = () => {
         year: [],
         vendor: [],
         selectedFiles: [],
-        selectedPrompt: ''
+        selectedPrompt: ""
     });
     const [useSuggestFollowupQuestions, setUseSuggestFollowupQuestions] = useState<boolean>(false);
     const [searchTextEmbeddings, setSearchTextEmbeddings] = useState<boolean>(true);
@@ -143,7 +143,8 @@ const Chat = () => {
             setShowChatHistoryBrowser(config.showChatHistoryBrowser);
             setShowChatHistoryCosmos(config.showChatHistoryCosmos);
             setShowAgenticRetrievalOption(config.showAgenticRetrievalOption);
-            setUseAgenticRetrieval(config.showAgenticRetrievalOption);
+            // When agentic retrieval is available, default it to enabled
+            setUseAgenticRetrieval(config.showAgenticRetrievalOption ? true : false);
             if (config.showAgenticRetrievalOption) {
                 setRetrieveCount(10);
             }
@@ -237,14 +238,14 @@ const Chat = () => {
             ]);
 
             // Debug logging for advanced filters
-            console.log('DEBUG: advancedFilters state:', advancedFilters);
-            console.log('DEBUG: selectedFiles:', advancedFilters.selectedFiles);
-            console.log('DEBUG: selectedFiles length:', advancedFilters.selectedFiles.length);
+            console.log("DEBUG: advancedFilters state:", advancedFilters);
+            console.log("DEBUG: selectedFiles:", advancedFilters.selectedFiles);
+            console.log("DEBUG: selectedFiles length:", advancedFilters.selectedFiles.length);
             if (advancedFilters.selectedFiles.length > 0) {
-                console.log('DEBUG: first selectedFile full:', advancedFilters.selectedFiles[0]);
-                console.log('DEBUG: first selectedFile length:', advancedFilters.selectedFiles[0].length);
+                console.log("DEBUG: first selectedFile full:", advancedFilters.selectedFiles[0]);
+                console.log("DEBUG: first selectedFile length:", advancedFilters.selectedFiles[0].length);
             }
-            
+
             const request: ChatAppRequest = {
                 messages: [...messages, { content: question, role: "user" }],
                 context: {
@@ -270,7 +271,7 @@ const Chat = () => {
                         send_image_sources: sendImageSources,
                         language: i18n.language,
                         use_agentic_retrieval: useAgenticRetrieval,
-                        selected_prompt: advancedFilters.selectedPrompt && advancedFilters.selectedPrompt !== '' ? advancedFilters.selectedPrompt : undefined,
+                        selected_prompt: advancedFilters.selectedPrompt && advancedFilters.selectedPrompt !== "" ? advancedFilters.selectedPrompt : undefined,
                         // Advanced filters - multi-select arrays
                         include_categories: advancedFilters.category.length > 0 ? advancedFilters.category : undefined,
                         include_document_types: advancedFilters.documenttype.length > 0 ? advancedFilters.documenttype : undefined,
@@ -283,9 +284,9 @@ const Chat = () => {
                 // AI Chat Protocol: Client must pass on any session state received from the server
                 session_state: answers.length ? answers[answers.length - 1][1].session_state : null
             };
-            
+
             // Debug log the final request
-            console.log('DEBUG: Final request overrides:', request.context?.overrides);
+            console.log("DEBUG: Final request overrides:", request.context?.overrides);
 
             const response = await chatApi(request, shouldStream, token);
             if (!response.body) {
@@ -425,7 +426,6 @@ const Chat = () => {
         }
     };
 
-
     const onShowCitation = (citation: string, index: number) => {
         if (activeCitation === citation && activeAnalysisPanelTab === AnalysisPanelTabs.CitationTab && selectedAnswer === index) {
             setActiveAnalysisPanelTab(undefined);
@@ -464,7 +464,7 @@ const Chat = () => {
                 <div className={styles.commandsContainer}>
                     <ClearChatButton className={styles.commandButton} onClick={clearChat} disabled={!lastQuestionRef.current || isLoading} />
                     {showUserUpload && <UploadFile className={styles.commandButton} disabled={!loggedIn} />}
-                    <button 
+                    <button
                         className={styles.commandButton}
                         onClick={() => setIsProcessingPanelOpen(!isProcessingPanelOpen)}
                         title="View AI Processing Steps"

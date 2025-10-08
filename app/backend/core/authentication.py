@@ -63,7 +63,8 @@ class AuthenticationHelper:
         self.key_url = f"{self.authority}/discovery/v2.0/keys"
 
         if self.use_authentication:
-            field_names = [field.name for field in search_index.fields] if search_index else []
+            field_names = [
+                field.name for field in search_index.fields] if search_index else []
             self.has_auth_fields = "oids" in field_names and "groups" in field_names
             self.require_access_control = require_access_control
             self.enable_global_documents = enable_global_documents
@@ -80,16 +81,23 @@ class AuthenticationHelper:
     def get_auth_setup_for_client(self) -> dict[str, Any]:
         # returns MSAL.js settings used by the client app
         return {
-            "useLogin": self.use_authentication,  # Whether or not login elements are enabled on the UI
-            "requireAccessControl": self.require_access_control,  # Whether or not access control is required to access documents with access control lists
-            "enableUnauthenticatedAccess": self.enable_unauthenticated_access,  # Whether or not the user can access the app without login
+            # Whether or not login elements are enabled on the UI
+            "useLogin": self.use_authentication,
+            # Whether or not access control is required to access documents with access control lists
+            "requireAccessControl": self.require_access_control,
+            # Whether or not the user can access the app without login
+            "enableUnauthenticatedAccess": self.enable_unauthenticated_access,
             "msalConfig": {
                 "auth": {
                     "clientId": self.client_app_id,  # Client app id used for login
-                    "authority": self.authority,  # Directory to use for login https://learn.microsoft.com/entra/identity-platform/msal-client-application-configuration#authority
-                    "redirectUri": "/redirect",  # Points to window.location.origin. You must register this URI on Azure Portal/App Registration.
-                    "postLogoutRedirectUri": "/",  # Indicates the page to navigate after logout.
-                    "navigateToLoginRequestUrl": False,  # If "true", will navigate back to the original request location before processing the auth code response.
+                    # Directory to use for login https://learn.microsoft.com/entra/identity-platform/msal-client-application-configuration#authority
+                    "authority": self.authority,
+                    # Points to window.location.origin. You must register this URI on Azure Portal/App Registration.
+                    "redirectUri": "/redirect",
+                    # Indicates the page to navigate after logout.
+                    "postLogoutRedirectUri": "/",
+                    # If "true", will navigate back to the original request location before processing the auth code response.
+                    "navigateToLoginRequestUrl": False,
                 },
                 "cache": {
                     # Configures cache location. "sessionStorage" is more secure, but "localStorage" gives you SSO between tabs.
@@ -121,11 +129,13 @@ class AuthenticationHelper:
             parts = auth.split()
 
             if parts[0].lower() != "bearer":
-                raise AuthError(error="Authorization header must start with Bearer", status_code=401)
+                raise AuthError(
+                    error="Authorization header must start with Bearer", status_code=401)
             elif len(parts) == 1:
                 raise AuthError(error="Token not found", status_code=401)
             elif len(parts) > 2:
-                raise AuthError(error="Authorization header must be Bearer token", status_code=401)
+                raise AuthError(
+                    error="Authorization header must be Bearer token", status_code=401)
 
             token = parts[1]
             return token
@@ -136,14 +146,17 @@ class AuthenticationHelper:
         if token:
             return token
 
-        raise AuthError(error="Authorization header is expected", status_code=401)
+        raise AuthError(
+            error="Authorization header is expected", status_code=401)
 
     def build_security_filters(self, overrides: dict[str, Any], auth_claims: dict[str, Any]):
         # Build different permutations of the oid or groups security filter using OData filters
         # https://learn.microsoft.com/azure/search/search-security-trimming-for-azure-search
         # https://learn.microsoft.com/azure/search/search-query-odata-filter
-        use_oid_security_filter = self.require_access_control or overrides.get("use_oid_security_filter")
-        use_groups_security_filter = self.require_access_control or overrides.get("use_groups_security_filter")
+        use_oid_security_filter = self.require_access_control or overrides.get(
+            "use_oid_security_filter")
+        use_groups_security_filter = self.require_access_control or overrides.get(
+            "use_groups_security_filter")
 
         if (use_oid_security_filter or use_groups_security_filter) and not self.has_auth_fields:
             raise AuthError(
@@ -151,10 +164,12 @@ class AuthenticationHelper:
             )
 
         oid_security_filter = (
-            "oids/any(g:search.in(g, '{}'))".format(auth_claims.get("oid", "")) if use_oid_security_filter else None
+            "oids/any(g:search.in(g, '{}'))".format(auth_claims.get("oid",
+                                                                    "")) if use_oid_security_filter else None
         )
         groups_security_filter = (
-            "groups/any(g:search.in(g, '{}'))".format(", ".join(auth_claims.get("groups", [])))
+            "groups/any(g:search.in(g, '{}'))".format(
+                ", ".join(auth_claims.get("groups", [])))
             if use_groups_security_filter
             else None
         )
@@ -180,7 +195,8 @@ class AuthenticationHelper:
 
     @staticmethod
     async def list_groups(graph_resource_access_token: dict) -> list[str]:
-        headers = {"Authorization": "Bearer " + graph_resource_access_token["access_token"]}
+        headers = {"Authorization": "Bearer " +
+                   graph_resource_access_token["access_token"]}
         groups = []
         async with aiohttp.ClientSession(headers=headers) as session:
             resp_json = None
@@ -189,7 +205,8 @@ class AuthenticationHelper:
                 resp_json = await resp.json()
                 resp_status = resp.status
                 if resp_status != 200:
-                    raise AuthError(error=json.dumps(resp_json), status_code=resp_status)
+                    raise AuthError(error=json.dumps(
+                        resp_json), status_code=resp_status)
 
             while resp_status == 200:
                 value = resp_json["value"]
@@ -203,13 +220,19 @@ class AuthenticationHelper:
                 else:
                     break
             if resp_status != 200:
-                raise AuthError(error=json.dumps(resp_json), status_code=resp_status)
+                raise AuthError(error=json.dumps(resp_json),
+                                status_code=resp_status)
 
         return groups
 
     async def get_auth_claims_if_enabled(self, headers: dict) -> dict[str, Any]:
         if not self.use_authentication:
             return {}
+
+        # If unauthenticated access is enabled and no authorization header is present, return empty claims
+        if self.enable_unauthenticated_access and not headers.get("Authorization") and not headers.get("x-ms-token-aad-access-token"):
+            return {}
+
         try:
             # Read the authentication token from the authorization header and exchange it using the On Behalf Of Flow
             # The scope is set to the Microsoft Graph API, which may need to be called for more authorization information
@@ -221,15 +244,18 @@ class AuthenticationHelper:
             # Use the on-behalf-of-flow to acquire another token for use with Microsoft Graph
             # See https://learn.microsoft.com/entra/identity-platform/v2-oauth2-on-behalf-of-flow for more information
             graph_resource_access_token = self.confidential_client.acquire_token_on_behalf_of(
-                user_assertion=auth_token, scopes=["https://graph.microsoft.com/.default"]
+                user_assertion=auth_token, scopes=[
+                    "https://graph.microsoft.com/.default"]
             )
             if "error" in graph_resource_access_token:
-                raise AuthError(error=str(graph_resource_access_token), status_code=401)
+                raise AuthError(
+                    error=str(graph_resource_access_token), status_code=401)
 
             # Read the claims from the response. The oid and groups claims are used for security filtering
             # https://learn.microsoft.com/entra/identity-platform/id-token-claims-reference
             id_token_claims = graph_resource_access_token["id_token_claims"]
-            auth_claims = {"oid": id_token_claims["oid"], "groups": id_token_claims.get("groups", [])}
+            auth_claims = {
+                "oid": id_token_claims["oid"], "groups": id_token_claims.get("groups", [])}
 
             # A groups claim may have been omitted either because it was not added in the application manifest for the API application,
             # or a groups overage claim may have been emitted.
@@ -245,7 +271,8 @@ class AuthenticationHelper:
                 auth_claims["groups"] = await AuthenticationHelper.list_groups(graph_resource_access_token)
             return auth_claims
         except AuthError as e:
-            logging.exception("Exception getting authorization information - " + json.dumps(e.error))
+            logging.exception(
+                "Exception getting authorization information - " + json.dumps(e.error))
             if self.require_access_control and not self.enable_unauthenticated_access:
                 raise
             return {}
@@ -257,7 +284,8 @@ class AuthenticationHelper:
 
     async def check_path_auth(self, path: str, auth_claims: dict[str, Any], search_client: SearchClient) -> bool:
         # Start with the standard security filter for all queries
-        security_filter = self.build_security_filters(overrides={}, auth_claims=auth_claims)
+        security_filter = self.build_security_filters(
+            overrides={}, auth_claims=auth_claims)
         # If there was no security filter or no path, then the path is allowed
         if not security_filter or len(path) == 0:
             return True
@@ -290,8 +318,10 @@ class AuthenticationHelper:
             if key["kid"] == unverified_header["kid"]:
                 # Construct the RSA public key
                 public_numbers = rsa.RSAPublicNumbers(
-                    e=int.from_bytes(base64.urlsafe_b64decode(key["e"] + "=="), byteorder="big"),
-                    n=int.from_bytes(base64.urlsafe_b64decode(key["n"] + "=="), byteorder="big"),
+                    e=int.from_bytes(base64.urlsafe_b64decode(
+                        key["e"] + "=="), byteorder="big"),
+                    n=int.from_bytes(base64.urlsafe_b64decode(
+                        key["n"] + "=="), byteorder="big"),
                 )
                 public_key = public_numbers.public_key()
 
@@ -330,17 +360,20 @@ class AuthenticationHelper:
         issuer = None
         audience = None
         try:
-            unverified_claims = jwt.decode(token, options={"verify_signature": False})
+            unverified_claims = jwt.decode(
+                token, options={"verify_signature": False})
             issuer = unverified_claims.get("iss")
             audience = unverified_claims.get("aud")
             rsa_key = await self.create_pem_format(jwks, token)
         except jwt.PyJWTError as exc:
-            raise AuthError("Unable to parse authorization token.", 401) from exc
+            raise AuthError(
+                "Unable to parse authorization token.", 401) from exc
         if not rsa_key:
             raise AuthError("Unable to find appropriate key", 401)
 
         if issuer not in self.valid_issuers:
-            raise AuthError(f"Issuer {issuer} not in {','.join(self.valid_issuers)}", 401)
+            raise AuthError(
+                f"Issuer {issuer} not in {','.join(self.valid_issuers)}", 401)
 
         if audience not in self.valid_audiences:
             raise AuthError(
@@ -349,7 +382,8 @@ class AuthenticationHelper:
             )
 
         try:
-            jwt.decode(token, rsa_key, algorithms=["RS256"], audience=audience, issuer=issuer)
+            jwt.decode(token, rsa_key, algorithms=[
+                       "RS256"], audience=audience, issuer=issuer)
         except jwt.ExpiredSignatureError as jwt_expired_exc:
             raise AuthError("Token is expired", 401) from jwt_expired_exc
         except (jwt.InvalidAudienceError, jwt.InvalidIssuerError) as jwt_claims_exc:
@@ -358,4 +392,5 @@ class AuthenticationHelper:
                 401,
             ) from jwt_claims_exc
         except Exception as exc:
-            raise AuthError("Unable to parse authorization token.", 401) from exc
+            raise AuthError(
+                "Unable to parse authorization token.", 401) from exc
